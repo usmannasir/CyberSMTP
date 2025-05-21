@@ -1,0 +1,281 @@
+ADMIN: Test email POST received
+ADMIN: Sending test email to usman@cyberpersons.com
+send_test_email called: usman@cyberpersons.com
+phpmailer_init FIRED
+phpmailer_init log_email: Array
+(
+    [to_email] => usman@cyberpersons.com
+    [subject] => CyberSMTP Test Email
+    [body] => This is a test email sent from CyberSMTP.
+    [headers] => a:0:{}
+    [provider] => ses
+    [status] => sent
+    [response_data] => 
+)
+
+log_email called: Array
+(
+    [to_email] => usman@cyberpersons.com
+    [subject] => CyberSMTP Test Email
+    [body] => This is a test email sent from CyberSMTP.
+    [headers] => a:0:{}
+    [provider] => ses
+    [status] => sent
+    [response_data] => 
+)
+
+phpmailer_init FIRED
+phpmailer_init log_email: Array
+(
+    [to_email] => usman@cyberpersons.com
+    [subject] => CyberSMTP Test Email
+    [body] => This is a test email sent from CyberSMTP.
+    [headers] => a:0:{}
+    [provider] => ses
+    [status] => sent
+    [response_data] => 
+)
+
+log_email called: Array
+(
+    [to_email] => usman@cyberpersons.com
+    [subject] => CyberSMTP Test Email
+    [body] => This is a test email sent from CyberSMTP.
+    [headers] => a:0:{}
+    [provider] => ses
+    [status] => sent
+    [response_data] => 
+)
+
+ADMIN: Test email POST received
+ADMIN: Sending test email to usman@cyberpersons.com
+send_test_email called: usman@cyberpersons.com
+phpmailer_init FIRED
+phpmailer_init log_email: Array
+(
+    [to_email] => usman@cyberpersons.com
+    [subject] => CyberSMTP Test Email
+    [body] => This is a test email sent from CyberSMTP.
+    [headers] => a:0:{}
+    [provider] => ses
+    [status] => sent
+    [response_data] => 
+)
+
+log_email called: Array
+(
+    [to_email] => usman@cyberpersons.com
+    [subject] => CyberSMTP Test Email
+    [body] => This is a test email sent from CyberSMTP.
+    [headers] => a:0:{}
+    [provider] => ses
+    [status] => sent
+    [response_data] => 
+)
+
+phpmailer_init FIRED
+phpmailer_init log_email: Array
+(
+    [to_email] => usman@cyberpersons.com
+    [subject] => CyberSMTP Test Email
+    [body] => This is a test email sent from CyberSMTP.
+    [headers] => a:0:{}
+    [provider] => ses
+    [status] => sent
+    [response_data] => 
+)
+
+log_email called: Array
+(
+    [to_email] => usman@cyberpersons.com
+    [subject] => CyberSMTP Test Email
+    [body] => This is a test email sent from CyberSMTP.
+    [headers] => a:0:{}
+    [provider] => ses
+    [status] => sent
+    [response_data] => 
+)
+
+ADMIN: Test email POST received
+ADMIN: Sending test email to usman@cyberpersons.com
+send_test_email called: usman@cyberpersons.com
+phpmailer_init FIRED
+phpmailer_init log_email: Array
+(
+    [to_email] => usman@cyberpersons.com
+    [subject] => CyberSMTP Test Email
+    [body] => This is a test email sent from CyberSMTP.
+    [headers] => a:0:{}
+    [provider] => ses
+    [status] => sent
+    [response_data] => 
+)
+
+log_email called: Array
+(
+    [to_email] => usman@cyberpersons.com
+    [subject] => CyberSMTP Test Email
+    [body] => This is a test email sent from CyberSMTP.
+    [headers] => a:0:{}
+    [provider] => ses
+    [status] => sent
+    [response_data] => 
+)
+
+ADMIN: Test email POST received
+ADMIN: Sending test email to usman@cyberpersons.com
+send_test_email called: usman@cyberpersons.com
+ADMIN: Test email POST received
+ADMIN: Sending test email to usman@cyberpersons.com
+send_test_email called: usman@cyberpersons.com
+wp_mail error: Client error: `POST https://email.us-west-2.amazonaws.com/` resulted in a `400 Bad Request` response:
+<ErrorResponse xmlns="http://ses.amazonaws.com/doc/2010-12-01/">
+  <Error>
+    <Type>Sender</Type>
+    <Code>IncompleteS (truncated...)
+
+ADMIN: Test email POST received
+ADMIN: Sending test email to usman@cyberpersons.com
+send_test_email called: usman@cyberpersons.com
+SES API exception: Client error: `POST https://email.us-west-2.amazonaws.com/` resulted in a `400 Bad Request` response:
+<ErrorResponse xmlns="http://ses.amazonaws.com/doc/2010-12-01/">
+  <Error>
+    <Type>Sender</Type>
+    <Code>IncompleteS (truncated...)
+
+wp_mail error: Client error: `POST https://email.us-west-2.amazonaws.com/` resulted in a `400 Bad Request` response:
+<ErrorResponse xmlns="http://ses.amazonaws.com/doc/2010-12-01/">
+  <Error>
+    <Type>Sender</Type>
+    <Code>IncompleteS (truncated...)
+
+ADMIN: Test email POST received
+ADMIN: Sending test email to usman@cyberpersons.com
+send_test_email called: usman@cyberpersons.com
+SES API AwsException: User `arn:aws:iam::202533523900:user/cybersmtp' is not authorized to perform `ses:SendEmail' on resource `arn:aws:ses:us-west-2:202533523900:identity/cyberpanel.net'
+wp_mail error: User `arn:aws:iam::202533523900:user/cybersmtp' is not authorized to perform `ses:SendEmail' on resource `arn:aws:ses:us-west-2:202533523900:identity/cyberpanel.net'
+ADMIN: Test email POST received
+ADMIN: Sending test email to usman@cyberpersons.com
+send_test_email called: usman@cyberpersons.com
+SES API sendEmail result: Aws\Result Object
+(
+    [data:Aws\Result:private] => Array
+        (
+            [MessageId] => 01010196ee9a12b2-0414ee56-c3b0-4c3e-8143-17f9e1df52cc-000000
+            [@metadata] => Array
+                (
+                    [statusCode] => 200
+                    [effectiveUri] => https://email.us-west-2.amazonaws.com
+                    [headers] => Array
+                        (
+                            [date] => Tue, 20 May 2025 16:49:57 GMT
+                            [content-type] => text/xml
+                            [content-length] => 326
+                            [connection] => keep-alive
+                            [x-amzn-requestid] => 836ef844-06a4-44bb-9085-896774566ef0
+                        )
+
+                    [transferStats] => Array
+                        (
+                            [http] => Array
+                                (
+                                    [0] => Array
+                                        (
+                                        )
+
+                                )
+
+                        )
+
+                )
+
+        )
+
+    [monitoringEvents:Aws\Result:private] => Array
+        (
+        )
+
+)
+
+ADMIN: Test email POST received
+ADMIN: Sending test email to usman@cyberpersons.com
+send_test_email called: usman@cyberpersons.com
+ADMIN: Test email POST received
+ADMIN: Sending test email to usman@cyberpersons.com
+send_test_email called: usman@cyberpersons.com
+Brevo API response: Brevo\Client\Model\CreateSmtpEmail Object
+(
+    [container:protected] => Array
+        (
+            [messageId] => <202505201702.13263364639@smtp-relay.mailin.fr>
+            [messageIds] => 
+        )
+
+)
+
+ADMIN: Test email POST received
+ADMIN: Sending test email to usman@cyberpersons.com
+send_test_email called: usman@cyberpersons.com
+phpmailer_init FIRED
+phpmailer_init log_email: Array
+(
+    [to_email] => usman@cyberpersons.com
+    [subject] => CyberSMTP Test Email
+    [body] => This is a test email sent from CyberSMTP.
+    [headers] => a:0:{}
+    [provider] => brevo
+    [status] => sent
+    [response_data] => 
+)
+
+log_email called: Array
+(
+    [to_email] => usman@cyberpersons.com
+    [subject] => CyberSMTP Test Email
+    [body] => This is a test email sent from CyberSMTP.
+    [headers] => a:0:{}
+    [provider] => brevo
+    [status] => sent
+    [response_data] => 
+)
+
+ADMIN: Test email POST received
+ADMIN: Sending test email to usman@cyberpersons.com
+send_test_email called: usman@cyberpersons.com
+Brevo API response: Brevo\Client\Model\CreateSmtpEmail Object
+(
+    [container:protected] => Array
+        (
+            [messageId] => <202505201728.78208724949@smtp-relay.mailin.fr>
+            [messageIds] => 
+        )
+
+)
+
+ADMIN: Test email POST received
+ADMIN: Sending test email to usman@cyberpersons.com
+send_test_email called: usman@cyberpersons.com
+ADMIN: Test email POST received
+ADMIN: Sending test email to usman@cyberpersons.com
+send_test_email called: usman@cyberpersons.com
+SES API AwsException: The security token included in the request is invalid.
+wp_mail error: The security token included in the request is invalid.
+ADMIN: Test email POST received
+ADMIN: Sending test email to usman@cyberpersons.com
+send_test_email called: usman@cyberpersons.com
+ADMIN: Test email POST received
+ADMIN: Sending test email to usman@cyberpersons.com
+send_test_email called: usman@cyberpersons.com
+Brevo API response: Brevo\Client\Model\CreateSmtpEmail Object
+(
+    [container:protected] => Array
+        (
+            [messageId] => <202505210659.27293995279@smtp-relay.mailin.fr>
+            [messageIds] => 
+        )
+
+)
+
+ADMIN: Test email POST received
+ADMIN: Sending test email to usman@cyberpersons.com
+send_test_email called: usman@cyberpersons.com
