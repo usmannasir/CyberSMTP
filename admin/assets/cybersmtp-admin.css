@@ -913,7 +913,7 @@ body.toplevel_page_cybersmtp .wrap > .updated {
 
 .cybersmtp-cm-stats-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     gap: 16px;
 }
 

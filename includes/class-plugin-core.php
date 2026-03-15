@@ -86,7 +86,7 @@ class CyberSMTP_Plugin_Core {
             'CyberSMTP Test Email',
             '<div style="font-family:Inter,Arial,sans-serif;max-width:500px;margin:0 auto;padding:32px;">'
             . '<div style="text-align:center;margin-bottom:24px;">'
-            . '<img src="https://cyberpanel.net/wp-content/uploads/2025/04/cyberpanel-logo-icon_only.png" width="48" height="48" alt="CyberPanel">'
+            . '<img src="https://cyberpanel.net/wp-content/uploads/2026/03/cyberpanel-logo-icon_only.png" width="48" height="48" alt="CyberPanel">'
             . '</div>'
             . '<h2 style="color:#1a1a2e;text-align:center;">Email Delivered Successfully!</h2>'
             . '<p style="color:#555;text-align:center;">Your CyberSMTP configuration is working correctly.</p>'
@@ -206,12 +206,22 @@ class CyberSMTP_Plugin_Core {
         $logger = new CyberSMTP_Email_Logger();
         $stats = $logger->get_chart_data(intval($_POST['days'] ?? 7));
 
-        // If CyberMail, merge with API stats
+        // If CyberMail, merge with API stats (transform field names for JS)
         $settings = get_option('cybersmtp_smtp_settings', []);
         if (($settings['provider'] ?? '') === 'cybermail' && !empty($settings['api_key'])) {
             $cm = new CyberSMTP_Provider_CyberMail($settings);
             $api_stats = $cm->get_account_stats();
-            $stats['cybermail'] = $api_stats;
+            if ($api_stats) {
+                $total = $api_stats['this_month']['total'] ?? 0;
+                $bounced = $api_stats['this_month']['bounced'] ?? 0;
+                $stats['cybermail'] = [
+                    'sent_today'  => $api_stats['emails_sent_this_month'] ?? 0,
+                    'quota'       => $api_stats['monthly_limit'] ?? 0,
+                    'bounce_rate' => $total > 0 ? round(($bounced / $total) * 100, 1) : 0,
+                    'plan'        => $api_stats['plan'] ?? '',
+                    'remaining'   => $api_stats['emails_remaining'] ?? 0,
+                ];
+            }
         }
 
         wp_send_json_success($stats);

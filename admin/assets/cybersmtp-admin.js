@@ -286,13 +286,16 @@
                 var cm = data.cybermail;
                 var statsHtml = '<div class="cybersmtp-cm-stats-grid">';
                 if (cm.sent_today !== undefined) {
-                    statsHtml += '<div><strong>' + cm.sent_today + '</strong><span>Sent Today</span></div>';
+                    statsHtml += '<div><strong>' + cm.sent_today.toLocaleString() + '</strong><span>Sent This Month</span></div>';
                 }
                 if (cm.quota !== undefined) {
-                    statsHtml += '<div><strong>' + cm.quota + '</strong><span>Daily Quota</span></div>';
+                    statsHtml += '<div><strong>' + cm.quota.toLocaleString() + '</strong><span>Monthly Quota</span></div>';
                 }
                 if (cm.bounce_rate !== undefined) {
                     statsHtml += '<div><strong>' + cm.bounce_rate + '%</strong><span>Bounce Rate</span></div>';
+                }
+                if (cm.remaining !== undefined) {
+                    statsHtml += '<div><strong>' + cm.remaining.toLocaleString() + '</strong><span>Remaining</span></div>';
                 }
                 statsHtml += '</div>';
                 $('#cybersmtp-cybermail-stats').html(statsHtml);
