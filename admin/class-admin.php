@@ -8,6 +8,15 @@ class CyberSMTP_Admin {
         add_action('admin_menu', [$this, 'add_admin_menu']);
         add_action('admin_init', [$this, 'register_settings']);
         add_action('admin_enqueue_scripts', [$this, 'enqueue_assets']);
+        add_action('in_admin_header', [$this, 'hide_admin_notices']);
+    }
+
+    public function hide_admin_notices() {
+        $screen = get_current_screen();
+        if ($screen && strpos($screen->id, 'cybersmtp') !== false) {
+            remove_all_actions('admin_notices');
+            remove_all_actions('all_admin_notices');
+        }
     }
 
     public function add_admin_menu() {
@@ -102,7 +111,7 @@ class CyberSMTP_Admin {
             <!-- Header -->
             <div class="cybersmtp-header">
                 <div class="cybersmtp-header-left">
-                    <img src="https://cyberpanel.net/wp-content/uploads/2025/04/cyberpanel-logo-icon_only.png"
+                    <img src="https://cyberpanel.net/wp-content/uploads/2026/03/cyberpanel-logo-icon_only.png"
                          alt="CyberPanel" class="cybersmtp-logo-img" width="36" height="36">
                     <div>
                         <h1 class="cybersmtp-title">CyberSMTP</h1>
@@ -354,7 +363,12 @@ class CyberSMTP_Admin {
                                 <span class="cybersmtp-provider-badge">Recommended</span>
                             <?php endif; ?>
                             <div class="cybersmtp-provider-logo">
-                                <?php if (file_exists($icon_path)) echo file_get_contents($icon_path); ?>
+                                <?php if ($key === 'cybermail'): ?>
+                                    <img src="https://cyberpanel.net/wp-content/uploads/2026/03/cyberpanel-logo-icon_only.png"
+                                         alt="CyberMail" width="36" height="36" style="border-radius:6px;">
+                                <?php elseif (file_exists($icon_path)):
+                                    echo file_get_contents($icon_path);
+                                endif; ?>
                             </div>
                             <div class="cybersmtp-provider-label"><?php echo esc_html($data['label']); ?></div>
                         </div>

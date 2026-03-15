@@ -2,6 +2,14 @@
     'use strict';
 
     // ─── Provider Selection ─────────────────────────────────
+    function syncProviderInputs() {
+        // Disable inputs in hidden provider panels so they don't overwrite active values
+        $('.cybersmtp-provider-settings').each(function() {
+            var hidden = $(this).css('display') === 'none';
+            $(this).find('input, select, textarea').prop('disabled', hidden);
+        });
+    }
+
     $(document).on('click', '.cybersmtp-provider-card', function() {
         $('.cybersmtp-provider-card').removeClass('selected');
         $(this).addClass('selected');
@@ -12,6 +20,17 @@
         // Show/hide provider settings panels
         $('.cybersmtp-provider-settings').hide();
         $('.cybersmtp-provider-settings[data-for="' + provider + '"]').fadeIn(200);
+        syncProviderInputs();
+    });
+
+    // Sync on page load
+    $(document).ready(function() {
+        syncProviderInputs();
+    });
+
+    // Sync before form submit to be safe
+    $(document).on('submit', '#cybersmtp-settings-form', function() {
+        syncProviderInputs();
     });
 
     // ─── Mode Toggle (API vs SMTP) ─────────────────────────
