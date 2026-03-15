@@ -98,7 +98,7 @@ class CyberSMTP_Provider_CyberMail extends CyberSMTP_Provider_Abstract {
         $code = wp_remote_retrieve_response_code($response);
         $body = json_decode(wp_remote_retrieve_body($response), true);
 
-        if ($code === 200 && !empty($body['success'])) {
+        if (($code === 200 || $code === 202) && !empty($body['success'])) {
             return [
                 'success'    => true,
                 'message_id' => $body['data']['message_id'] ?? '',
@@ -106,10 +106,7 @@ class CyberSMTP_Provider_CyberMail extends CyberSMTP_Provider_Abstract {
             ];
         }
 
-        $error = $body['error'] ?? ('HTTP ' . $code);
-        if (!empty($body['error_code'])) {
-            $error = '[' . $body['error_code'] . '] ' . $error;
-        }
+        $error = self::parse_api_error($body, $code);
         return ['success' => false, 'error' => $error];
     }
 
@@ -231,10 +228,71 @@ class CyberSMTP_Provider_CyberMail extends CyberSMTP_Provider_Abstract {
 
     /**
      * Verify API key is valid.
+     * Try stats endpoint first; if permission denied, try a lightweight send dry-run.
      */
     public function verify_connection() {
-        $stats = $this->get_account_stats();
-        return $stats !== null;
+        $api_key = $this->settings['api_key'] ?? '';
+        if (empty($api_key)) {
+            return false;
+        }
+
+        // Try the stats endpoint
+        $response = wp_remote_get($this->api_base . '/account/stats', [
+            'headers' => [
+                'Authorization' => 'Bearer ' . $api_key,
+                'User-Agent'    => 'CyberSMTP-WordPress/' . CYBERSMTP_VERSION,
+            ],
+            'timeout' => 15,
+        ]);
+
+        if (is_wp_error($response)) {
+            return false;
+        }
+
+        $code = wp_remote_retrieve_response_code($response);
+
+        // 200 = valid key with stats permission
+        if ($code === 200) {
+            return true;
+        }
+
+        // 401 = invalid key
+        if ($code === 401) {
+            return false;
+        }
+
+        // 403 = valid key but no stats permission — still connected
+        if ($code === 403) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Parse error from CyberMail API response.
+     * API returns: {"success": false, "error": {"type": "...", "message": "..."}}
+     */
+    protected static function parse_api_error($body, $http_code = 0) {
+        if (!is_array($body)) {
+            return 'HTTP ' . $http_code;
+        }
+
+        $error = $body['error'] ?? null;
+
+        // Nested error object: {"error": {"type": "...", "message": "..."}}
+        if (is_array($error)) {
+            $msg = $error['message'] ?? 'Unknown error';
+            $type = $error['type'] ?? '';
+            return $type ? "[$type] $msg" : $msg;
+        }
+
+        // Flat error string
+        if (is_string($error) && $error !== '') {
+            return $error;
+        }
+
+        return 'HTTP ' . $http_code;
     }
 
     public function get_settings_fields() {
