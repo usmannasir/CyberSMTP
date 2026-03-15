@@ -1,59 +1,69 @@
 # CyberSMTP
 
-A modern, multi-provider SMTP plugin for WordPress. Supports Amazon SES, SendGrid, Mailgun, Brevo (Sendinblue), and generic SMTP. Includes logs, analytics, tooltips, and a beautiful UI.
+The official CyberPanel email plugin for WordPress. Send emails reliably via **CyberMail**, Amazon SES, SendGrid, Mailgun, Brevo, or any SMTP server.
 
 ---
 
 ## Features
 
-- **Multi-provider support:** Amazon SES, SendGrid, Mailgun, Brevo (Sendinblue), and generic SMTP
-- **Modern UI:** Clean, intuitive admin interface with SVG provider icons
-- **Email logs & analytics:** Track sent and failed emails, view delivery stats
-- **Test email:** Send test emails from a dedicated tab
-- **Tooltips:** Helpful tooltips for all important fields
-- **Admin notice:** Prompts you to configure SMTP after installation
-- **Security:** Credentials are stored securely and never shared
-- **Easy setup:** Get started in minutes
+- **CyberMail Integration** — Free email delivery with delivery tracking, bounce analytics, and domain health monitoring. Recommended for CyberPanel users.
+- **Multi-provider support** — Amazon SES, SendGrid, Mailgun, Brevo (Sendinblue), and generic SMTP
+- **Modern dashboard** — Email activity charts, stats cards, quick actions
+- **Email logs** — Paginated logs with search, date filtering, status badges, email preview, and one-click resend
+- **Deliverability tools** — SPF, DKIM, DMARC, and MX record checker built-in
+- **Test email** — Send test emails from a dedicated tab
+- **CyberPanel auto-detection** — Detects CyberPanel servers and offers one-click CyberMail setup
+- **Zero bloat** — No Composer dependencies. Uses WordPress HTTP API for all provider integrations.
+- **Secure** — Credentials encrypted with WordPress salts. Nonce verification on all forms.
 
 ---
 
 ## Installation
 
-1. Upload the plugin files to the `/wp-content/plugins/cybersmtp` directory, or install through the WordPress plugins screen.
-2. Activate the plugin through the 'Plugins' screen in WordPress.
-3. Go to **CyberSMTP** in your WordPress admin menu to configure your email provider and settings.
+1. Upload to `/wp-content/plugins/cybersmtp/` or install via WordPress plugins screen.
+2. Activate the plugin.
+3. Go to **CyberSMTP** in your admin menu.
+4. Choose **CyberMail** (recommended) or configure your preferred provider.
 
 ---
 
-## Usage
+## CyberMail (Recommended)
 
-- Select your email provider from the grid.
-- Enter your SMTP/API credentials and sender details.
-- Save your settings.
-- Use the **Test Email** tab to verify your configuration.
-- View sent/failed emails in the **Logs** tab.
+CyberMail is a free email delivery service by CyberPanel with features not available from third-party providers:
+
+- Real-time delivery status tracking
+- Bounce analytics
+- Domain health monitoring
+- Auto-DKIM configuration
+- Built-in spam protection
+
+Get your free API key at [platform.cyberpersons.com/email](https://platform.cyberpersons.com/email/).
+
+---
+
+## Providers
+
+| Provider | Modes | Auth |
+|----------|-------|------|
+| CyberMail | API, SMTP | API Key (`sk_live_`) |
+| Amazon SES | API (SigV4), SMTP | Access Key + Secret |
+| SendGrid | API, SMTP | API Key |
+| Mailgun | API, SMTP | API Key + Domain |
+| Brevo | API, SMTP | API Key |
+| Generic SMTP | SMTP | Username + Password |
 
 ---
 
 ## FAQ
 
-**Q: Will this work with WooCommerce, Contact Form 7, Gravity Forms, etc?**  
-A: Yes! CyberSMTP replaces the default WordPress mailer, so all plugins that use `wp_mail()` will work.
+**Q: Does this work with WooCommerce, Contact Form 7, Gravity Forms, etc.?**
+A: Yes. CyberSMTP replaces `wp_mail()`, so all plugins using it will work automatically.
 
-**Q: Is my email data secure?**  
-A: Yes. Credentials are stored in your WordPress database and only sent to your chosen provider.
+**Q: Do I need Composer or any PHP dependencies?**
+A: No. CyberSMTP uses the WordPress HTTP API for all API-based providers. Zero external dependencies.
 
-**Q: What providers are supported?**  
-A: Amazon SES, SendGrid, Mailgun, Brevo (Sendinblue), and any generic SMTP server.
-
-**Q: Can I see email logs?**  
-A: Yes, CyberSMTP includes a logs tab for sent and failed emails.
-
----
-
-## Contributing
-
-Pull requests are welcome! For major changes, please open an issue first to discuss what you would like to change.
+**Q: Is my data secure?**
+A: Yes. API keys and passwords are encrypted using WordPress salts before storage.
 
 ---
 
@@ -63,6 +73,4 @@ Pull requests are welcome! For major changes, please open an issue first to disc
 
 ---
 
-## Credits
-
-Developed by [CyberPanel](https://cyberpanel.net/). 
+Developed by [CyberPanel](https://cyberpanel.net/).

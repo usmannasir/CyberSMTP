@@ -1,139 +1,942 @@
-/* CyberSMTP Admin UI Styles */
+/* CyberSMTP 2.0 Admin Styles */
+
+:root {
+    --cs-primary: #6366f1;
+    --cs-primary-dark: #4f46e5;
+    --cs-primary-light: #e0e7ff;
+    --cs-success: #22c55e;
+    --cs-success-bg: #f0fdf4;
+    --cs-error: #ef4444;
+    --cs-error-bg: #fef2f2;
+    --cs-warning: #f59e0b;
+    --cs-text: #1a1a2e;
+    --cs-text-secondary: #64748b;
+    --cs-border: #e2e8f0;
+    --cs-bg: #f8fafc;
+    --cs-white: #ffffff;
+    --cs-radius: 10px;
+    --cs-radius-sm: 6px;
+    --cs-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+    --cs-shadow-md: 0 4px 12px rgba(0,0,0,0.06);
+    --cs-font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* ─── Layout ───────────────────────────────────────────── */
+
+.cybersmtp-wrap {
+    max-width: 960px;
+    margin: 20px auto 0;
+    font-family: var(--cs-font);
+    color: var(--cs-text);
+}
+
+/* ─── Header ───────────────────────────────────────────── */
 
 .cybersmtp-header {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0;
+    padding: 16px 0;
 }
-.cybersmtp-logo {
-  width: 40px;
-  height: 40px;
-  background: #6c63ff;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #fff;
-  font-size: 1.5em;
-  font-weight: bold;
+
+.cybersmtp-header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
 }
-.cybersmtp-welcome {
-  font-size: 1.3em;
-  font-weight: 500;
-  margin-bottom: 8px;
+
+.cybersmtp-logo-img {
+    border-radius: 8px;
 }
+
+.cybersmtp-title {
+    font-size: 22px;
+    font-weight: 700;
+    margin: 0;
+    padding: 0;
+    line-height: 1.2;
+    color: var(--cs-text);
+}
+
+.cybersmtp-version {
+    font-size: 11px;
+    color: var(--cs-text-secondary);
+    background: var(--cs-bg);
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: 500;
+}
+
+.cybersmtp-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 6px 14px;
+    border-radius: 20px;
+}
+
+.cybersmtp-status-active {
+    color: #166534;
+    background: var(--cs-success-bg);
+}
+
+.cybersmtp-status-inactive {
+    color: #991b1b;
+    background: var(--cs-error-bg);
+}
+
+.cybersmtp-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.cybersmtp-status-active .cybersmtp-dot { background: var(--cs-success); }
+.cybersmtp-status-inactive .cybersmtp-dot { background: var(--cs-error); }
+
+/* ─── Tabs ─────────────────────────────────────────────── */
+
+.cybersmtp-tabs {
+    display: flex;
+    gap: 2px;
+    border-bottom: 2px solid var(--cs-border);
+    margin-bottom: 24px;
+}
+
+.cybersmtp-tab {
+    padding: 10px 20px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--cs-text-secondary);
+    text-decoration: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    transition: all 0.15s;
+}
+
+.cybersmtp-tab:hover {
+    color: var(--cs-primary);
+}
+
+.cybersmtp-tab.active {
+    color: var(--cs-primary);
+    border-bottom-color: var(--cs-primary);
+    font-weight: 600;
+}
+
+/* ─── Cards ────────────────────────────────────────────── */
+
+.cybersmtp-card {
+    background: var(--cs-white);
+    border: 1px solid var(--cs-border);
+    border-radius: var(--cs-radius);
+    padding: 24px;
+    margin-bottom: 20px;
+    box-shadow: var(--cs-shadow);
+}
+
+.cybersmtp-card h3 {
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0 0 16px;
+    color: var(--cs-text);
+}
+
+.cybersmtp-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+}
+
+.cybersmtp-card-header h3 {
+    margin: 0;
+}
+
+.cybersmtp-card-table {
+    padding: 0;
+    overflow: hidden;
+}
+
+.cybersmtp-card-table .cybersmtp-table-header {
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--cs-border);
+    font-size: 13px;
+    color: var(--cs-text-secondary);
+}
+
+/* ─── Stats Grid ───────────────────────────────────────── */
+
+.cybersmtp-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+@media (max-width: 768px) {
+    .cybersmtp-stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+.cybersmtp-stat-card {
+    background: var(--cs-white);
+    border: 1px solid var(--cs-border);
+    border-radius: var(--cs-radius);
+    padding: 20px;
+    box-shadow: var(--cs-shadow);
+}
+
+.cybersmtp-stat-label {
+    font-size: 13px;
+    color: var(--cs-text-secondary);
+    font-weight: 500;
+    margin-bottom: 8px;
+}
+
+.cybersmtp-stat-value {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--cs-text);
+    line-height: 1;
+}
+
+.cybersmtp-stat-error {
+    color: var(--cs-error);
+}
+
+/* ─── Provider Grid ────────────────────────────────────── */
+
 .cybersmtp-provider-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 20px;
-  margin: 24px 0 32px 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 12px;
+    margin-top: 16px;
 }
+
 .cybersmtp-provider-card {
-  background: #fff;
-  border: 2px solid #e0e0e0;
-  border-radius: 10px;
-  padding: 24px 10px 12px 10px;
-  text-align: center;
-  cursor: pointer;
-  transition: border 0.2s, box-shadow 0.2s;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.03);
-  min-height: 100px;
-  position: relative;
+    background: var(--cs-white);
+    border: 2px solid var(--cs-border);
+    border-radius: var(--cs-radius);
+    padding: 20px 12px 14px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.15s;
+    position: relative;
 }
-.cybersmtp-provider-card.selected,
+
 .cybersmtp-provider-card:hover {
-  border: 2px solid #6c63ff;
-  box-shadow: 0 4px 16px rgba(108,99,255,0.08);
+    border-color: var(--cs-primary);
+    box-shadow: var(--cs-shadow-md);
+    transform: translateY(-1px);
 }
-.cybersmtp-provider-icon {
-  font-size: 2em;
-  margin-bottom: 8px;
+
+.cybersmtp-provider-card.selected {
+    border-color: var(--cs-primary);
+    background: var(--cs-primary-light);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
 }
-.cybersmtp-provider-label {
-  font-size: 1.1em;
-  font-weight: 500;
+
+.cybersmtp-provider-recommended {
+    border-color: var(--cs-primary);
 }
-.cybersmtp-footer {
-  margin-top: 40px;
-  text-align: center;
-  color: #888;
-  font-size: 0.95em;
+
+.cybersmtp-provider-badge {
+    position: absolute;
+    top: -8px;
+    right: -4px;
+    background: var(--cs-primary);
+    color: white;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
-/* Settings form modern look */
-#cybersmtp-settings-form {
-  background: #fff;
-  border-radius: 10px;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.04);
-  padding: 32px 24px 24px 24px;
-  margin-bottom: 32px;
-}
-#cybersmtp-settings-form .form-table th {
-  width: 180px;
-  font-weight: 500;
-}
-#cybersmtp-settings-form .form-table td {
-  padding-bottom: 12px;
-}
-.cybersmtp-section {
-  background: #f8fafd;
-  border-radius: 10px;
-  box-shadow: 0 1px 6px rgba(0,0,0,0.03);
-  padding: 24px 24px 8px 24px;
-  margin-bottom: 28px;
-}
-.cybersmtp-section h2 {
-  font-size: 1.15em;
-  font-weight: 600;
-  margin-top: 0;
-  margin-bottom: 18px;
-  color: #3a3a3a;
-}
-.cybersmtp-help {
-  display: inline-block;
-  background: #e0e7ef;
-  color: #4a4a4a;
-  border-radius: 50%;
-  width: 18px;
-  height: 18px;
-  text-align: center;
-  font-size: 0.95em;
-  font-weight: bold;
-  cursor: pointer;
-  margin-left: 6px;
-  position: relative;
-}
-.cybersmtp-help[title]:hover:after {
-  content: attr(title);
-  position: absolute;
-  left: 50%;
-  top: 120%;
-  transform: translateX(-50%);
-  background: #222;
-  color: #fff;
-  padding: 6px 12px;
-  border-radius: 6px;
-  white-space: nowrap;
-  font-size: 0.95em;
-  z-index: 10;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-}
+
 .cybersmtp-provider-logo {
-  width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #fff;
-  border-radius: 8px;
-  border: 1px solid #e0e0e0;
-  padding: 0;
-  overflow: hidden;
-  margin: 0 auto 8px auto;
+    width: 36px;
+    height: 36px;
+    margin: 0 auto 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
-.cybersmtp-provider-logo img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  display: block;
-} 
+
+.cybersmtp-provider-logo svg {
+    width: 100%;
+    height: 100%;
+}
+
+.cybersmtp-provider-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--cs-text);
+}
+
+/* ─── Forms ────────────────────────────────────────────── */
+
+.cybersmtp-form-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.cybersmtp-form-table th {
+    text-align: left;
+    padding: 12px 16px 12px 0;
+    font-weight: 500;
+    font-size: 14px;
+    color: var(--cs-text);
+    width: 140px;
+    vertical-align: top;
+    padding-top: 18px;
+}
+
+.cybersmtp-form-table td {
+    padding: 10px 0;
+}
+
+.cybersmtp-input {
+    font-family: var(--cs-font);
+    font-size: 14px;
+    padding: 8px 12px;
+    border: 1px solid var(--cs-border);
+    border-radius: var(--cs-radius-sm);
+    width: 100%;
+    max-width: 400px;
+    transition: border-color 0.15s;
+    box-sizing: border-box;
+}
+
+.cybersmtp-input:focus {
+    outline: none;
+    border-color: var(--cs-primary);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.cybersmtp-input-sm {
+    max-width: 160px;
+}
+
+.cybersmtp-select {
+    font-family: var(--cs-font);
+    font-size: 14px;
+    padding: 8px 12px;
+    border: 1px solid var(--cs-border);
+    border-radius: var(--cs-radius-sm);
+    background: var(--cs-white);
+    cursor: pointer;
+}
+
+.cybersmtp-field-desc {
+    font-size: 12px;
+    color: var(--cs-text-secondary);
+    margin: 6px 0 0;
+}
+
+.cybersmtp-form-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid var(--cs-border);
+}
+
+/* ─── Buttons ──────────────────────────────────────────── */
+
+.cybersmtp-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--cs-font);
+    font-size: 14px;
+    font-weight: 500;
+    padding: 9px 18px;
+    border-radius: var(--cs-radius-sm);
+    border: none;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.15s;
+    line-height: 1.4;
+}
+
+.cybersmtp-btn-primary {
+    background: var(--cs-primary);
+    color: white;
+}
+
+.cybersmtp-btn-primary:hover {
+    background: var(--cs-primary-dark);
+    color: white;
+}
+
+.cybersmtp-btn-outline {
+    background: transparent;
+    color: var(--cs-primary);
+    border: 1px solid var(--cs-primary);
+}
+
+.cybersmtp-btn-outline:hover {
+    background: var(--cs-primary-light);
+    color: var(--cs-primary);
+}
+
+.cybersmtp-btn-text {
+    background: none;
+    color: var(--cs-text-secondary);
+    padding: 9px 12px;
+}
+
+.cybersmtp-btn-text:hover {
+    color: var(--cs-text);
+}
+
+.cybersmtp-btn-sm {
+    font-size: 13px;
+    padding: 5px 12px;
+}
+
+.cybersmtp-btn-lg {
+    font-size: 15px;
+    padding: 12px 28px;
+}
+
+.cybersmtp-btn-icon {
+    background: none;
+    border: none;
+    padding: 4px;
+    cursor: pointer;
+    color: var(--cs-text-secondary);
+    border-radius: 4px;
+    transition: all 0.15s;
+}
+
+.cybersmtp-btn-icon:hover {
+    background: var(--cs-bg);
+    color: var(--cs-primary);
+}
+
+/* ─── Badges ───────────────────────────────────────────── */
+
+.cybersmtp-badge {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.cybersmtp-badge-success {
+    background: var(--cs-success-bg);
+    color: #166534;
+}
+
+.cybersmtp-badge-error {
+    background: var(--cs-error-bg);
+    color: #991b1b;
+}
+
+.cybersmtp-badge-primary {
+    background: var(--cs-primary-light);
+    color: var(--cs-primary-dark);
+}
+
+.cybersmtp-provider-tag {
+    font-size: 12px;
+    color: var(--cs-text-secondary);
+    background: var(--cs-bg);
+    padding: 2px 8px;
+    border-radius: 4px;
+}
+
+/* ─── Table ────────────────────────────────────────────── */
+
+.cybersmtp-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.cybersmtp-table thead th {
+    text-align: left;
+    padding: 12px 16px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--cs-text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid var(--cs-border);
+    background: var(--cs-bg);
+}
+
+.cybersmtp-table tbody td {
+    padding: 12px 16px;
+    font-size: 14px;
+    border-bottom: 1px solid #f1f5f9;
+    vertical-align: middle;
+}
+
+.cybersmtp-table tbody tr:hover {
+    background: #fafbfc;
+}
+
+.cybersmtp-cell-email {
+    font-weight: 500;
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.cybersmtp-cell-subject {
+    color: var(--cs-text-secondary);
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.cybersmtp-cell-date {
+    font-size: 13px;
+    color: var(--cs-text-secondary);
+    white-space: nowrap;
+}
+
+.cybersmtp-empty {
+    text-align: center;
+    color: var(--cs-text-secondary);
+    padding: 40px 16px !important;
+}
+
+/* ─── Log Detail ───────────────────────────────────────── */
+
+.cybersmtp-log-detail td {
+    padding: 0 !important;
+    border: none !important;
+}
+
+.cybersmtp-detail-content {
+    background: var(--cs-bg);
+    padding: 16px 24px;
+    border-top: 1px solid var(--cs-border);
+}
+
+.cybersmtp-detail-row {
+    padding: 6px 0;
+    font-size: 13px;
+}
+
+.cybersmtp-detail-row strong {
+    display: inline-block;
+    width: 90px;
+    color: var(--cs-text-secondary);
+    font-weight: 500;
+}
+
+.cybersmtp-detail-error {
+    color: var(--cs-error);
+}
+
+.cybersmtp-email-preview {
+    margin-top: 8px;
+    padding: 12px;
+    background: white;
+    border: 1px solid var(--cs-border);
+    border-radius: var(--cs-radius-sm);
+    font-size: 13px;
+    color: var(--cs-text-secondary);
+    max-height: 120px;
+    overflow-y: auto;
+}
+
+/* ─── Pagination ───────────────────────────────────────── */
+
+.cybersmtp-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 16px 24px;
+    border-top: 1px solid var(--cs-border);
+}
+
+.cybersmtp-page-info {
+    font-size: 13px;
+    color: var(--cs-text-secondary);
+}
+
+/* ─── Filters ──────────────────────────────────────────── */
+
+.cybersmtp-filter-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.cybersmtp-filter-row .cybersmtp-input {
+    max-width: 220px;
+}
+
+.cybersmtp-filter-row .cybersmtp-select {
+    min-width: 120px;
+}
+
+.cybersmtp-filter-row span {
+    color: var(--cs-text-secondary);
+    font-size: 13px;
+}
+
+/* ─── DNS Check ────────────────────────────────────────── */
+
+.cybersmtp-dns-check-form {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.cybersmtp-dns-check-form .cybersmtp-input {
+    max-width: 300px;
+}
+
+.cybersmtp-dns-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+@media (max-width: 768px) {
+    .cybersmtp-dns-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.cybersmtp-dns-card {
+    background: var(--cs-white);
+    border: 1px solid var(--cs-border);
+    border-radius: var(--cs-radius);
+    padding: 20px;
+    box-shadow: var(--cs-shadow);
+}
+
+.cybersmtp-dns-card h4 {
+    margin: 0 0 8px;
+    font-size: 15px;
+    font-weight: 600;
+}
+
+.cybersmtp-dns-icon {
+    font-size: 24px;
+    font-weight: bold;
+    margin-bottom: 8px;
+}
+
+.cybersmtp-dns-found .cybersmtp-dns-icon { color: var(--cs-success); }
+.cybersmtp-dns-missing .cybersmtp-dns-icon { color: var(--cs-error); }
+
+.cybersmtp-dns-found { border-left: 3px solid var(--cs-success); }
+.cybersmtp-dns-missing { border-left: 3px solid var(--cs-error); }
+
+.cybersmtp-dns-status {
+    font-size: 13px;
+    font-weight: 500;
+    margin: 4px 0 8px;
+}
+
+.cybersmtp-dns-found .cybersmtp-dns-status { color: var(--cs-success); }
+.cybersmtp-dns-missing .cybersmtp-dns-status { color: var(--cs-error); }
+
+.cybersmtp-dns-card code {
+    display: block;
+    background: var(--cs-bg);
+    padding: 8px 12px;
+    border-radius: var(--cs-radius-sm);
+    font-size: 11px;
+    word-break: break-all;
+    color: var(--cs-text-secondary);
+    margin-top: 8px;
+}
+
+.cybersmtp-dns-suggestion {
+    font-size: 12px;
+    color: var(--cs-text-secondary);
+    margin-top: 8px;
+    padding: 8px;
+    background: #fffbeb;
+    border-radius: var(--cs-radius-sm);
+    border: 1px solid #fde68a;
+}
+
+/* ─── Alerts ───────────────────────────────────────────── */
+
+.cybersmtp-alert {
+    padding: 12px 16px;
+    border-radius: var(--cs-radius-sm);
+    margin: 12px 0;
+    font-size: 14px;
+}
+
+.cybersmtp-alert-success {
+    background: var(--cs-success-bg);
+    color: #166534;
+    border: 1px solid #bbf7d0;
+}
+
+.cybersmtp-alert-error {
+    background: var(--cs-error-bg);
+    color: #991b1b;
+    border: 1px solid #fecaca;
+}
+
+.cybersmtp-text-success { color: var(--cs-success); font-weight: 500; }
+.cybersmtp-text-error { color: var(--cs-error); font-weight: 500; }
+
+/* ─── Info Box ─────────────────────────────────────────── */
+
+.cybersmtp-info-box {
+    background: var(--cs-primary-light);
+    color: var(--cs-primary-dark);
+    padding: 12px 16px;
+    border-radius: var(--cs-radius-sm);
+    font-size: 14px;
+    margin-bottom: 16px;
+    border: 1px solid rgba(99, 102, 241, 0.2);
+}
+
+.cybersmtp-info-box a {
+    color: var(--cs-primary-dark);
+    font-weight: 600;
+}
+
+/* ─── Setup Prompt ─────────────────────────────────────── */
+
+.cybersmtp-setup {
+    text-align: center;
+    padding: 40px 20px;
+}
+
+.cybersmtp-setup-icon {
+    margin-bottom: 16px;
+}
+
+.cybersmtp-setup h2 {
+    font-size: 24px;
+    margin: 0 0 8px;
+}
+
+.cybersmtp-setup > p {
+    color: var(--cs-text-secondary);
+    max-width: 500px;
+    margin: 0 auto 32px;
+    font-size: 15px;
+}
+
+.cybersmtp-setup-options {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: 20px;
+    max-width: 700px;
+    margin: 0 auto;
+    text-align: left;
+}
+
+@media (max-width: 640px) {
+    .cybersmtp-setup-options {
+        grid-template-columns: 1fr;
+    }
+}
+
+.cybersmtp-setup-option {
+    background: var(--cs-white);
+    border: 1px solid var(--cs-border);
+    border-radius: var(--cs-radius);
+    padding: 28px 24px;
+    box-shadow: var(--cs-shadow);
+    position: relative;
+}
+
+.cybersmtp-setup-option h3 {
+    font-size: 18px;
+    margin: 0 0 8px;
+}
+
+.cybersmtp-setup-option p {
+    color: var(--cs-text-secondary);
+    font-size: 14px;
+    margin: 0 0 16px;
+}
+
+.cybersmtp-setup-option ul {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 20px;
+}
+
+.cybersmtp-setup-option ul li {
+    padding: 4px 0;
+    font-size: 14px;
+    color: var(--cs-text);
+}
+
+.cybersmtp-setup-option ul li::before {
+    content: "\2713";
+    color: var(--cs-success);
+    font-weight: bold;
+    margin-right: 8px;
+}
+
+.cybersmtp-setup-recommended {
+    border-color: var(--cs-primary);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.cybersmtp-recommended-badge {
+    position: absolute;
+    top: -10px;
+    left: 20px;
+    background: var(--cs-primary);
+    color: white;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 12px;
+    border-radius: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.cybersmtp-setup-hint {
+    font-size: 12px;
+    color: var(--cs-text-secondary);
+    margin-top: 12px;
+}
+
+/* ─── Actions Grid ─────────────────────────────────────── */
+
+.cybersmtp-actions-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+}
+
+@media (max-width: 640px) {
+    .cybersmtp-actions-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+.cybersmtp-action-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 20px 12px;
+    background: var(--cs-bg);
+    border: 1px solid var(--cs-border);
+    border-radius: var(--cs-radius);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--cs-text);
+    text-decoration: none;
+    transition: all 0.15s;
+}
+
+.cybersmtp-action-btn:hover {
+    background: var(--cs-primary-light);
+    color: var(--cs-primary);
+    border-color: var(--cs-primary);
+}
+
+.cybersmtp-action-btn .dashicons {
+    font-size: 22px;
+    width: 22px;
+    height: 22px;
+    color: var(--cs-primary);
+}
+
+/* ─── Test Email ───────────────────────────────────────── */
+
+.cybersmtp-test-form {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.cybersmtp-test-form .cybersmtp-input {
+    max-width: 320px;
+}
+
+/* ─── Promo Card ───────────────────────────────────────── */
+
+.cybersmtp-promo {
+    background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
+    border: 1px solid rgba(99, 102, 241, 0.2);
+}
+
+.cybersmtp-promo h3 {
+    color: var(--cs-primary-dark);
+}
+
+.cybersmtp-promo p {
+    color: var(--cs-text-secondary);
+    margin-bottom: 16px;
+}
+
+/* ─── CyberMail Stats ─────────────────────────────────── */
+
+.cybersmtp-card-cybermail {
+    border-left: 3px solid var(--cs-primary);
+}
+
+.cybersmtp-cm-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+}
+
+.cybersmtp-cm-stats-grid > div {
+    text-align: center;
+}
+
+.cybersmtp-cm-stats-grid strong {
+    display: block;
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--cs-text);
+}
+
+.cybersmtp-cm-stats-grid span {
+    font-size: 12px;
+    color: var(--cs-text-secondary);
+}
+
+.cybersmtp-loading {
+    color: var(--cs-text-secondary);
+    font-size: 13px;
+}
+
+/* ─── Footer ───────────────────────────────────────────── */
+
+.cybersmtp-footer {
+    text-align: center;
+    padding: 24px 0;
+    color: var(--cs-text-secondary);
+    font-size: 13px;
+}
+
+.cybersmtp-footer a {
+    color: var(--cs-text-secondary);
+    text-decoration: none;
+}
+
+.cybersmtp-footer a:hover {
+    color: var(--cs-primary);
+}

@@ -5,294 +5,828 @@ if (!defined('ABSPATH')) {
 
 class CyberSMTP_Admin {
     public function __construct() {
-        add_action('admin_menu', array($this, 'add_admin_menu'));
-        add_action('admin_init', array($this, 'register_settings'));
-        add_action('admin_enqueue_scripts', array($this, 'enqueue_admin_styles'));
+        add_action('admin_menu', [$this, 'add_admin_menu']);
+        add_action('admin_init', [$this, 'register_settings']);
+        add_action('admin_enqueue_scripts', [$this, 'enqueue_assets']);
     }
 
     public function add_admin_menu() {
         add_menu_page(
-            __('CyberSMTP', 'cyberpanel.net'),
-            __('CyberSMTP', 'cyberpanel.net'),
+            'CyberSMTP',
+            'CyberSMTP',
             'manage_options',
             'cybersmtp',
-            array($this, 'render_page'),
+            [$this, 'render_page'],
             'dashicons-email-alt',
             56
         );
     }
 
     public function register_settings() {
-        register_setting('cybersmtp_settings_group', 'cybersmtp_smtp_settings');
+        register_setting('cybersmtp_settings_group', 'cybersmtp_smtp_settings', [
+            'sanitize_callback' => [$this, 'sanitize_settings'],
+        ]);
     }
 
-    public function enqueue_admin_styles($hook) {
-        // Only load on our plugin page
-        if (isset($_GET['page']) && $_GET['page'] === 'cybersmtp') {
-            wp_enqueue_style('cybersmtp-admin', plugin_dir_url(__FILE__) . 'assets/cybersmtp-admin.css', array(), '1.0');
-        }
-    }
+    public function sanitize_settings($input) {
+        $clean = [];
+        $fields = ['provider', 'mode', 'api_key', 'api_secret', 'host', 'port',
+                    'username', 'password', 'encryption', 'region', 'domain',
+                    'from_email', 'from_name'];
 
-    public function render_page() {
-        $tab = isset($_GET['tab']) ? sanitize_text_field($_GET['tab']) : 'settings';
-        echo '<div class="wrap">';
-        // Modern header
-        echo '<div class="cybersmtp-header">';
-        echo '<div class="cybersmtp-logo"><img src="https://cyberpanel.net/wp-content/uploads/2025/04/cyberpanel-logo-icon_only.png" alt="CyberPanel Logo" style="width: 40px; height: 40px; object-fit: contain;" /></div>';
-        echo '<div>';
-        echo '<div class="cybersmtp-welcome">Welcome to CyberSMTP</div>';
-        echo '<div style="color:#666;">Configure your email provider and settings below. Test your email score for free, <a href="https://platform.cyberpersons.com/MailTester/MailTester" target="_blank" rel="noopener">click here</a>.</div>';
-        echo '</div>';
-        echo '</div>';
-        // Tabs
-        echo '<nav class="nav-tab-wrapper">';
-        echo '<a href="?page=cybersmtp&tab=settings" class="nav-tab' . ($tab === 'settings' ? ' nav-tab-active' : '') . '">⚙️ Settings</a>';
-        echo '<a href="?page=cybersmtp&tab=test" class="nav-tab' . ($tab === 'test' ? ' nav-tab-active' : '') . '">✉️ Test Email</a>';
-        echo '<a href="?page=cybersmtp&tab=logs" class="nav-tab' . ($tab === 'logs' ? ' nav-tab-active' : '') . '">📋 Logs</a>';
-        echo '</nav>';
-        if ($tab === 'logs') {
-            $this->render_logs_page();
-        } elseif ($tab === 'test') {
-            $this->render_test_email_page();
-        } else {
-            $this->render_settings_page();
+        foreach ($fields as $f) {
+            if (isset($input[$f])) {
+                $clean[$f] = $f === 'from_email'
+                    ? sanitize_email($input[$f])
+                    : sanitize_text_field($input[$f]);
+            }
         }
-        // Footer
-        echo '<div class="cybersmtp-footer">CyberSMTP &copy; ' . date('Y') . ' &mdash; <a href="https://cyberpanel.net/" target="_blank">Documentation</a></div>';
-        echo '</div>';
-    }
 
-    public function render_settings_page() {
-        $settings = get_option('cybersmtp_smtp_settings', array());
-        $provider = $settings['provider'] ?? 'smtp';
-        $mode = $settings['mode'] ?? 'smtp';
-        $providers = [
-            'smtp' => [
-                'label' => 'Generic SMTP',
-                'icon' => 'smtp.svg',
-            ],
-            'ses' => [
-                'label' => 'Amazon SES',
-                'icon' => 'amazonses.svg',
-            ],
-            'sendgrid' => [
-                'label' => 'SendGrid',
-                'icon' => 'sendgrid.svg',
-            ],
-            'mailgun' => [
-                'label' => 'Mailgun',
-                'icon' => 'mailgun.svg',
-            ],
-            'brevo' => [
-                'label' => 'Brevo',
-                'icon' => 'brevo.svg',
-            ],
-        ];
-        echo '<form method="post" action="options.php" id="cybersmtp-settings-form">';
-        settings_fields('cybersmtp_settings_group');
-        // Provider Selection Section
-        echo '<div class="cybersmtp-section"><h2>Provider Selection</h2>';
-        echo '<div class="cybersmtp-provider-grid">';
-        foreach ($providers as $key => $data) {
-            $selected = ($provider === $key) ? 'selected' : '';
-            echo '<div class="cybersmtp-provider-card ' . $selected . '" data-provider="' . esc_attr($key) . '">';
-            echo '<div class="cybersmtp-provider-logo">';
-            $icon_path = __DIR__ . '/assets/icons/' . $data['icon'];
-            if (file_exists($icon_path)) {
-                echo file_get_contents($icon_path);
-            }
-            echo '</div>';
-            echo '<div class="cybersmtp-provider-label">' . esc_html($data['label']) . '</div>';
-            echo '</div>';
-        }
-        echo '</div>';
-        echo '<input type="hidden" name="cybersmtp_smtp_settings[provider]" id="cybersmtp-provider-select" value="' . esc_attr($provider) . '" />';
-        echo '</div>';
-        // SMTP/API Settings Section
-        echo '<div class="cybersmtp-section"><h2>SMTP/API Settings</h2>';
-        echo '<table class="form-table">';
-        echo '<tr class="cybersmtp-field cybersmtp-field-mode"><th scope="row">Mode <span class="cybersmtp-help" title="Choose SMTP for standard email sending or API for direct integration with supported providers.">?</span></th><td>
-            <select name="cybersmtp_smtp_settings[mode]" id="cybersmtp-mode-select">
-                <option value="smtp" ' . selected($mode, 'smtp', false) . '>SMTP</option>
-                <option value="api" ' . selected($mode, 'api', false) . '>API</option>
-            </select>
-            <span class="description">(For SendGrid/Mailgun/SES/Brevo only)</span>
-        </td></tr>';
-        echo '<tr class="cybersmtp-field cybersmtp-field-api-key"><th scope="row">API Key <span class="cybersmtp-help" title="Your API key from the selected provider. Required for API mode.">?</span></th><td><input type="text" name="cybersmtp_smtp_settings[api_key]" value="' . esc_attr($settings['api_key'] ?? '') . '" class="regular-text"></td></tr>';
-        echo '<tr class="cybersmtp-field cybersmtp-field-api-secret"><th scope="row">API Secret <span class="cybersmtp-help" title="Some providers require both an API key and secret.">?</span></th><td><input type="text" name="cybersmtp_smtp_settings[api_secret]" value="' . esc_attr($settings['api_secret'] ?? '') . '" class="regular-text"></td></tr>';
-        echo '<tr class="cybersmtp-field cybersmtp-field-domain"><th scope="row">Mailgun Domain <span class="cybersmtp-help" title="Your Mailgun sending domain, e.g. mg.example.com">?</span></th><td><input type="text" name="cybersmtp_smtp_settings[domain]" value="' . esc_attr($settings['domain'] ?? '') . '" class="regular-text"><span class="description">(e.g. mg.example.com)</span></td></tr>';
-        echo '<tr class="cybersmtp-field cybersmtp-field-host"><th scope="row">SMTP Host <span class="cybersmtp-help" title="The SMTP server address provided by your email provider.">?</span></th><td><input type="text" name="cybersmtp_smtp_settings[host]" value="' . esc_attr($settings['host'] ?? '') . '" class="regular-text"></td></tr>';
-        echo '<tr class="cybersmtp-field cybersmtp-field-port"><th scope="row">SMTP Port <span class="cybersmtp-help" title="The port number for your SMTP server, usually 587 (TLS) or 465 (SSL).">?</span></th><td><input type="number" name="cybersmtp_smtp_settings[port]" value="' . esc_attr($settings['port'] ?? '587') . '" class="small-text"></td></tr>';
-        echo '<tr class="cybersmtp-field cybersmtp-field-username"><th scope="row">Username <span class="cybersmtp-help" title="Your SMTP or API username, often your email address.">?</span></th><td><input type="text" name="cybersmtp_smtp_settings[username]" value="' . esc_attr($settings['username'] ?? '') . '" class="regular-text"></td></tr>';
-        echo '<tr class="cybersmtp-field cybersmtp-field-password"><th scope="row">Password <span class="cybersmtp-help" title="Your SMTP or API password/secret.">?</span></th><td><input type="password" name="cybersmtp_smtp_settings[password]" value="' . esc_attr($settings['password'] ?? '') . '" class="regular-text"></td></tr>';
-        echo '<tr class="cybersmtp-field cybersmtp-field-encryption"><th scope="row">Encryption <span class="cybersmtp-help" title="Choose TLS or SSL for secure connections. Use None only if your provider instructs.">?</span></th><td>
-            <select name="cybersmtp_smtp_settings[encryption]">'
-                . '<option value="tls" ' . selected($settings['encryption'] ?? '', 'tls', false) . '>TLS</option>'
-                . '<option value="ssl" ' . selected($settings['encryption'] ?? '', 'ssl', false) . '>SSL</option>'
-                . '<option value="" ' . selected($settings['encryption'] ?? '', '', false) . '>None</option>'
-            . '</select>
-        </td></tr>';
-        echo '<tr class="cybersmtp-field cybersmtp-field-region"><th scope="row">SES Region <span class="cybersmtp-help" title="The AWS region for your SES account, e.g. us-east-1.">?</span></th><td><input type="text" name="cybersmtp_smtp_settings[region]" value="' . esc_attr($settings['region'] ?? '') . '" class="regular-text"><span class="description">(For Amazon SES only, e.g. us-east-1)</span></td></tr>';
-        echo '</table>';
-        echo '</div>';
-        // Sender Details Section
-        echo '<div class="cybersmtp-section"><h2>Sender Details</h2>';
-        echo '<table class="form-table">';
-        echo '<tr><th scope="row">From Email <span class="cybersmtp-help" title="The email address that will appear as the sender.">?</span></th><td><input type="email" name="cybersmtp_smtp_settings[from_email]" value="' . esc_attr($settings['from_email'] ?? '') . '" class="regular-text" required></td></tr>';
-        echo '<tr><th scope="row">From Name <span class="cybersmtp-help" title="The name that will appear as the sender.">?</span></th><td><input type="text" name="cybersmtp_smtp_settings[from_name]" value="' . esc_attr($settings['from_name'] ?? '') . '" class="regular-text"></td></tr>';
-        echo '</table>';
-        echo '</div>';
-        echo '<div style="display:flex;gap:12px;align-items:center;margin-top:16px;">';
-        echo '<input type="submit" class="button button-primary" value="Save Settings" />';
-        echo '</form>';
-        // Add JS for provider card selection and field updates
-        echo "<script>
-(function($){
-    $(document).on('click', '.cybersmtp-provider-card', function() {
-        $('.cybersmtp-provider-card').removeClass('selected');
-        $(this).addClass('selected');
-        var provider = $(this).data('provider');
-        $('#cybersmtp-provider-select').val(provider).trigger('change');
-    });
-    function updateFields() {
-        var provider = $('#cybersmtp-provider-select').val();
-        var mode = $('#cybersmtp-mode-select').val();
-        $('.cybersmtp-field').hide();
-        // Show/hide fields for each provider/mode
-        if (provider === 'ses') {
-            $('.cybersmtp-field-mode').show();
-            if (mode === 'api') {
-                $('.cybersmtp-field-api-key, .cybersmtp-field-api-secret, .cybersmtp-field-region').show();
+        // Encrypt sensitive fields
+        foreach (['api_key', 'api_secret', 'password'] as $secret) {
+            if (!empty($clean[$secret]) && strpos($clean[$secret], '••••') === false) {
+                $clean[$secret . '_encrypted'] = self::encrypt($clean[$secret]);
             } else {
-                $('.cybersmtp-field-host, .cybersmtp-field-port, .cybersmtp-field-username, .cybersmtp-field-password, .cybersmtp-field-encryption, .cybersmtp-field-region').show();
-            }
-        } else if (provider === 'sendgrid') {
-            $('.cybersmtp-field-mode').show();
-            if (mode === 'api') {
-                $('.cybersmtp-field-api-key').show();
-            } else {
-                $('.cybersmtp-field-host, .cybersmtp-field-port, .cybersmtp-field-username, .cybersmtp-field-password, .cybersmtp-field-encryption').show();
-            }
-        } else if (provider === 'mailgun') {
-            $('.cybersmtp-field-mode').show();
-            if (mode === 'api') {
-                $('.cybersmtp-field-api-key, .cybersmtp-field-domain').show();
-            } else {
-                $('.cybersmtp-field-host, .cybersmtp-field-port, .cybersmtp-field-username, .cybersmtp-field-password, .cybersmtp-field-encryption').show();
-            }
-        } else if (provider === 'brevo') {
-            $('.cybersmtp-field-mode').show();
-            if (mode === 'api') {
-                $('.cybersmtp-field-api-key').show();
-            } else {
-                $('.cybersmtp-field-host, .cybersmtp-field-port, .cybersmtp-field-username, .cybersmtp-field-password, .cybersmtp-field-encryption').show();
-            }
-        } else {
-            // Generic SMTP
-            $('.cybersmtp-field-host, .cybersmtp-field-port, .cybersmtp-field-username, .cybersmtp-field-password, .cybersmtp-field-encryption').show();
-        }
-        if (provider === 'smtp') {
-            $('.cybersmtp-field-host label').text('SMTP Host');
-        } else if (provider === 'ses') {
-            $('.cybersmtp-field-host label').text('SES SMTP Host');
-        } else if (provider === 'sendgrid') {
-            $('.cybersmtp-field-host label').text('SendGrid SMTP Host');
-        } else if (provider === 'mailgun') {
-            $('.cybersmtp-field-host label').text('Mailgun SMTP Host');
-        } else if (provider === 'brevo') {
-            $('.cybersmtp-field-host label').text('Brevo SMTP Host');
-        }
-    }
-    $(document).ready(function(){
-        updateFields();
-        $('#cybersmtp-provider-select, #cybersmtp-mode-select').on('change', updateFields);
-        // Tooltip
-        $('.cybersmtp-help').hover(function(){
-            $(this).addClass('active');
-        }, function(){
-            $(this).removeClass('active');
-        });
-    });
-})(jQuery);
-</script>";
-    }
-
-    public function render_test_email_page() {
-        $test_email_result = '';
-        if (isset($_POST['cybersmtp_test_email'])) {
-            file_put_contents(dirname(__DIR__) . '/cybersmtp-debug.log', "ADMIN: Test email POST received\n", FILE_APPEND);
-            if (!check_admin_referer('cybersmtp_test_email_action', 'cybersmtp_test_email_nonce')) {
-                file_put_contents(dirname(__DIR__) . '/cybersmtp-debug.log', "ADMIN: Nonce check failed\n", FILE_APPEND);
-            } else {
-                $test_email = sanitize_email($_POST['cybersmtp_test_email_address']);
-                if (is_email($test_email)) {
-                    file_put_contents(dirname(__DIR__) . '/cybersmtp-debug.log', "ADMIN: Sending test email to $test_email\n", FILE_APPEND);
-                    $mailer = new CyberSMTP_Mailer();
-                    $mailer->send_test_email($test_email);
-                    $test_email_result = '<div class="notice notice-success"><p>Test email sent to ' . esc_html($test_email) . ' (check your inbox and logs tab).</p></div>';
-                } else {
-                    file_put_contents(dirname(__DIR__) . '/cybersmtp-debug.log', "ADMIN: Invalid email address: $test_email\n", FILE_APPEND);
-                    $test_email_result = '<div class="notice notice-error"><p>Invalid email address.</p></div>';
+                // Keep existing encrypted value
+                $old = get_option('cybersmtp_smtp_settings', []);
+                if (!empty($old[$secret . '_encrypted'])) {
+                    $clean[$secret . '_encrypted'] = $old[$secret . '_encrypted'];
+                    $clean[$secret] = self::decrypt($old[$secret . '_encrypted']);
                 }
             }
         }
-        echo '<div style="max-width:500px;margin:32px auto 0 auto;background:#fff;padding:32px 24px 24px 24px;border-radius:10px;box-shadow:0 2px 12px rgba(0,0,0,0.04);">';
-        echo '<h2>Send Test Email</h2>';
-        echo $test_email_result;
-        echo '<form method="post">';
-        wp_nonce_field('cybersmtp_test_email_action', 'cybersmtp_test_email_nonce');
-        echo '<input type="email" name="cybersmtp_test_email_address" placeholder="Recipient Email" required style="width:70%;margin-right:10px;" />';
-        echo '<input type="submit" name="cybersmtp_test_email" class="button button-secondary" value="Send Test Email" />';
-        echo '</form>';
-        echo '</div>';
+
+        delete_transient('cybersmtp_cybermail_stats');
+
+        return $clean;
     }
 
-    public function render_logs_page() {
-        require_once dirname(__FILE__) . '/../includes/class-email-logger.php';
+    public function enqueue_assets($hook) {
+        if (strpos($hook, 'cybersmtp') === false) {
+            return;
+        }
+
+        wp_enqueue_style('cybersmtp-admin', CYBERSMTP_URL . 'admin/assets/cybersmtp-admin.css', [], CYBERSMTP_VERSION);
+
+        // Chart.js for dashboard (CDN — lightweight, cached)
+        $tab = sanitize_text_field($_GET['tab'] ?? 'dashboard');
+        if ($tab === 'dashboard' || $tab === '') {
+            wp_enqueue_script('chartjs', 'https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js', [], '4.4.7', true);
+            wp_enqueue_script('cybersmtp-admin', CYBERSMTP_URL . 'admin/assets/cybersmtp-admin.js', ['jquery', 'chartjs'], CYBERSMTP_VERSION, true);
+        } else {
+            wp_enqueue_script('cybersmtp-admin', CYBERSMTP_URL . 'admin/assets/cybersmtp-admin.js', ['jquery'], CYBERSMTP_VERSION, true);
+        }
+
+        wp_localize_script('cybersmtp-admin', 'cybersmtp', [
+            'ajax_url' => admin_url('admin-ajax.php'),
+            'nonce'    => wp_create_nonce('cybersmtp_nonce'),
+        ]);
+    }
+
+    public function render_page() {
+        $tab = sanitize_text_field($_GET['tab'] ?? 'dashboard');
+        $tabs = [
+            'dashboard'      => 'Dashboard',
+            'settings'       => 'Settings',
+            'logs'           => 'Email Logs',
+            'deliverability' => 'Deliverability',
+            'test'           => 'Test Email',
+        ];
+
+        $settings = get_option('cybersmtp_smtp_settings', []);
+        $provider = $settings['provider'] ?? '';
+        $is_configured = $provider && (!empty($settings['api_key']) || !empty($settings['host']));
+        $is_cybermail = $provider === 'cybermail';
+        ?>
+        <div class="wrap cybersmtp-wrap">
+            <!-- Header -->
+            <div class="cybersmtp-header">
+                <div class="cybersmtp-header-left">
+                    <img src="https://cyberpanel.net/wp-content/uploads/2025/04/cyberpanel-logo-icon_only.png"
+                         alt="CyberPanel" class="cybersmtp-logo-img" width="36" height="36">
+                    <div>
+                        <h1 class="cybersmtp-title">CyberSMTP</h1>
+                        <span class="cybersmtp-version">v<?php echo esc_html(CYBERSMTP_VERSION); ?></span>
+                    </div>
+                </div>
+                <div class="cybersmtp-header-right">
+                    <?php if ($is_configured): ?>
+                        <span class="cybersmtp-status cybersmtp-status-active">
+                            <span class="cybersmtp-dot"></span>
+                            <?php echo esc_html(self::provider_name($provider)); ?> Connected
+                        </span>
+                    <?php else: ?>
+                        <span class="cybersmtp-status cybersmtp-status-inactive">
+                            <span class="cybersmtp-dot"></span>
+                            Not Configured
+                        </span>
+                    <?php endif; ?>
+                </div>
+            </div>
+
+            <!-- Tabs -->
+            <nav class="cybersmtp-tabs">
+                <?php foreach ($tabs as $key => $label): ?>
+                    <a href="?page=cybersmtp&tab=<?php echo esc_attr($key); ?>"
+                       class="cybersmtp-tab <?php echo $tab === $key ? 'active' : ''; ?>">
+                        <?php echo esc_html($label); ?>
+                    </a>
+                <?php endforeach; ?>
+            </nav>
+
+            <!-- Content -->
+            <div class="cybersmtp-content">
+                <?php
+                switch ($tab) {
+                    case 'settings':
+                        $this->render_settings();
+                        break;
+                    case 'logs':
+                        $this->render_logs();
+                        break;
+                    case 'deliverability':
+                        $this->render_deliverability();
+                        break;
+                    case 'test':
+                        $this->render_test();
+                        break;
+                    default:
+                        $this->render_dashboard();
+                }
+                ?>
+            </div>
+
+            <!-- Footer -->
+            <div class="cybersmtp-footer">
+                <a href="https://cyberpanel.net/" target="_blank">CyberPanel</a>
+                &middot;
+                <a href="https://platform.cyberpersons.com/email/" target="_blank">CyberMail</a>
+                &middot;
+                <a href="https://platform.cyberpersons.com/MailTester/MailTester" target="_blank">Mail Tester</a>
+            </div>
+        </div>
+        <?php
+    }
+
+    // ─── DASHBOARD ──────────────────────────────────────────
+
+    private function render_dashboard() {
+        $settings = get_option('cybersmtp_smtp_settings', []);
+        $provider = $settings['provider'] ?? '';
+        $is_cybermail = $provider === 'cybermail';
+        $is_configured = $provider && (!empty($settings['api_key']) || !empty($settings['host']));
+
+        $logger = new CyberSMTP_Email_Logger();
+        $analytics = $logger->get_analytics();
+
+        // Show setup prompt if not configured
+        if (!$is_configured) {
+            $this->render_setup_prompt();
+            return;
+        }
+        ?>
+        <!-- Stats Cards -->
+        <div class="cybersmtp-stats-grid">
+            <div class="cybersmtp-stat-card">
+                <div class="cybersmtp-stat-label">Emails Sent</div>
+                <div class="cybersmtp-stat-value"><?php echo esc_html(number_format($analytics['sent'])); ?></div>
+            </div>
+            <div class="cybersmtp-stat-card">
+                <div class="cybersmtp-stat-label">Failed</div>
+                <div class="cybersmtp-stat-value cybersmtp-stat-error"><?php echo esc_html(number_format($analytics['failed'])); ?></div>
+            </div>
+            <div class="cybersmtp-stat-card">
+                <div class="cybersmtp-stat-label">Success Rate</div>
+                <div class="cybersmtp-stat-value"><?php echo esc_html($analytics['rate']); ?>%</div>
+            </div>
+            <div class="cybersmtp-stat-card">
+                <div class="cybersmtp-stat-label">Today</div>
+                <div class="cybersmtp-stat-value"><?php echo esc_html(number_format($analytics['today_sent'])); ?></div>
+            </div>
+        </div>
+
+        <!-- Chart -->
+        <div class="cybersmtp-card">
+            <div class="cybersmtp-card-header">
+                <h3>Email Activity (Last 7 Days)</h3>
+                <select id="cybersmtp-chart-range" class="cybersmtp-select">
+                    <option value="7">7 days</option>
+                    <option value="14">14 days</option>
+                    <option value="30">30 days</option>
+                </select>
+            </div>
+            <canvas id="cybersmtp-chart" height="80"></canvas>
+        </div>
+
+        <?php if ($is_cybermail): ?>
+        <!-- CyberMail Account Info -->
+        <div class="cybersmtp-card cybersmtp-card-cybermail">
+            <div class="cybersmtp-card-header">
+                <h3>CyberMail Account</h3>
+                <span class="cybersmtp-badge cybersmtp-badge-primary">Active</span>
+            </div>
+            <div id="cybersmtp-cybermail-stats" class="cybersmtp-cybermail-stats">
+                <p class="cybersmtp-loading">Loading account stats...</p>
+            </div>
+        </div>
+        <?php endif; ?>
+
+        <!-- Quick Actions -->
+        <div class="cybersmtp-card">
+            <h3>Quick Actions</h3>
+            <div class="cybersmtp-actions-grid">
+                <a href="?page=cybersmtp&tab=test" class="cybersmtp-action-btn">
+                    <span class="dashicons dashicons-email"></span>
+                    Send Test Email
+                </a>
+                <a href="?page=cybersmtp&tab=deliverability" class="cybersmtp-action-btn">
+                    <span class="dashicons dashicons-shield"></span>
+                    Check Domain Health
+                </a>
+                <a href="?page=cybersmtp&tab=logs" class="cybersmtp-action-btn">
+                    <span class="dashicons dashicons-list-view"></span>
+                    View Logs
+                </a>
+                <a href="https://platform.cyberpersons.com/MailTester/MailTester" target="_blank" class="cybersmtp-action-btn">
+                    <span class="dashicons dashicons-awards"></span>
+                    Mail Tester
+                </a>
+            </div>
+        </div>
+
+        <?php if (!$is_cybermail): ?>
+        <!-- CyberMail promotion -->
+        <div class="cybersmtp-card cybersmtp-promo">
+            <div class="cybersmtp-promo-content">
+                <h3>Upgrade to CyberMail</h3>
+                <p>Get delivery tracking, bounce analytics, and domain health monitoring — features not available with third-party providers.</p>
+                <a href="<?php echo esc_url(CyberSMTP_CyberPanel_Detector::get_signup_url()); ?>"
+                   target="_blank" class="cybersmtp-btn cybersmtp-btn-primary">
+                    Get Started Free
+                </a>
+            </div>
+        </div>
+        <?php endif;
+    }
+
+    private function render_setup_prompt() {
+        $is_cp = CyberSMTP_CyberPanel_Detector::is_cyberpanel();
+        $signup_url = CyberSMTP_CyberPanel_Detector::get_signup_url();
+        ?>
+        <div class="cybersmtp-setup">
+            <div class="cybersmtp-setup-icon">
+                <span class="dashicons dashicons-email-alt" style="font-size:48px;width:48px;height:48px;color:#6366f1;"></span>
+            </div>
+            <h2>Let's set up your email</h2>
+            <p>WordPress needs a configured email provider to send emails reliably.
+               Without one, emails may go to spam or not be delivered at all.</p>
+
+            <div class="cybersmtp-setup-options">
+                <div class="cybersmtp-setup-option cybersmtp-setup-recommended">
+                    <div class="cybersmtp-recommended-badge">Recommended</div>
+                    <h3>CyberMail</h3>
+                    <p>Free email delivery service by CyberPanel with delivery tracking, bounce analytics, and auto-DKIM.</p>
+                    <ul>
+                        <li>Free to use</li>
+                        <li>Delivery status tracking</li>
+                        <li>Domain health monitoring</li>
+                        <li>Built-in spam protection</li>
+                    </ul>
+                    <?php if ($is_cp): ?>
+                        <a href="<?php echo esc_url($signup_url); ?>" target="_blank"
+                           class="cybersmtp-btn cybersmtp-btn-primary cybersmtp-btn-lg">
+                            Set Up CyberMail
+                        </a>
+                    <?php else: ?>
+                        <a href="<?php echo esc_url($signup_url); ?>" target="_blank"
+                           class="cybersmtp-btn cybersmtp-btn-primary cybersmtp-btn-lg">
+                            Get CyberMail (Free)
+                        </a>
+                    <?php endif; ?>
+                    <p class="cybersmtp-setup-hint">
+                        After signup, paste your API key in
+                        <a href="?page=cybersmtp&tab=settings">Settings</a>.
+                    </p>
+                </div>
+
+                <div class="cybersmtp-setup-option">
+                    <h3>Other Providers</h3>
+                    <p>Use your own SMTP server, Amazon SES, SendGrid, Mailgun, or Brevo.</p>
+                    <a href="?page=cybersmtp&tab=settings" class="cybersmtp-btn cybersmtp-btn-outline">
+                        Configure Manually
+                    </a>
+                </div>
+            </div>
+        </div>
+        <?php
+    }
+
+    // ─── SETTINGS ───────────────────────────────────────────
+
+    private function render_settings() {
+        $settings = get_option('cybersmtp_smtp_settings', []);
+        $provider = $settings['provider'] ?? '';
+        $mode = $settings['mode'] ?? 'api';
+
+        $providers = [
+            'cybermail' => ['label' => 'CyberMail', 'icon' => 'cybermail.svg', 'recommended' => true],
+            'smtp'      => ['label' => 'Other SMTP', 'icon' => 'smtp.svg', 'recommended' => false],
+            'ses'       => ['label' => 'Amazon SES', 'icon' => 'amazonses.svg', 'recommended' => false],
+            'sendgrid'  => ['label' => 'SendGrid', 'icon' => 'sendgrid.svg', 'recommended' => false],
+            'mailgun'   => ['label' => 'Mailgun', 'icon' => 'mailgun.svg', 'recommended' => false],
+            'brevo'     => ['label' => 'Brevo', 'icon' => 'brevo.svg', 'recommended' => false],
+        ];
+        ?>
+        <form method="post" action="options.php" id="cybersmtp-settings-form">
+            <?php settings_fields('cybersmtp_settings_group'); ?>
+
+            <!-- Provider Selection -->
+            <div class="cybersmtp-card">
+                <h3>Choose Your Email Provider</h3>
+                <div class="cybersmtp-provider-grid">
+                    <?php foreach ($providers as $key => $data):
+                        $selected = ($provider === $key) ? 'selected' : '';
+                        $icon_path = __DIR__ . '/assets/icons/' . $data['icon'];
+                    ?>
+                        <div class="cybersmtp-provider-card <?php echo $selected; ?> <?php echo $data['recommended'] ? 'cybersmtp-provider-recommended' : ''; ?>"
+                             data-provider="<?php echo esc_attr($key); ?>">
+                            <?php if ($data['recommended']): ?>
+                                <span class="cybersmtp-provider-badge">Recommended</span>
+                            <?php endif; ?>
+                            <div class="cybersmtp-provider-logo">
+                                <?php if (file_exists($icon_path)) echo file_get_contents($icon_path); ?>
+                            </div>
+                            <div class="cybersmtp-provider-label"><?php echo esc_html($data['label']); ?></div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+                <input type="hidden" name="cybersmtp_smtp_settings[provider]"
+                       id="cybersmtp-provider-input" value="<?php echo esc_attr($provider); ?>">
+            </div>
+
+            <!-- CyberMail Settings -->
+            <div class="cybersmtp-card cybersmtp-provider-settings" data-for="cybermail" <?php echo $provider !== 'cybermail' ? 'style="display:none"' : ''; ?>>
+                <h3>CyberMail Configuration</h3>
+                <?php if (CyberSMTP_CyberPanel_Detector::is_cyberpanel()): ?>
+                    <div class="cybersmtp-info-box">
+                        You're on a CyberPanel server! Get your free CyberMail API key from
+                        <a href="<?php echo esc_url(CyberSMTP_CyberPanel_Detector::get_signup_url()); ?>" target="_blank">
+                            platform.cyberpersons.com
+                        </a>.
+                    </div>
+                <?php endif; ?>
+                <table class="cybersmtp-form-table">
+                    <tr>
+                        <th>API Key</th>
+                        <td>
+                            <input type="password" name="cybersmtp_smtp_settings[api_key]"
+                                   id="cybersmtp-cybermail-apikey"
+                                   value="<?php echo esc_attr($settings['api_key'] ?? ''); ?>"
+                                   class="cybersmtp-input" placeholder="sk_live_...">
+                            <p class="cybersmtp-field-desc">Your CyberMail API key starting with <code>sk_live_</code></p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>From Email</th>
+                        <td>
+                            <input type="email" name="cybersmtp_smtp_settings[from_email]"
+                                   value="<?php echo esc_attr($settings['from_email'] ?? ''); ?>"
+                                   class="cybersmtp-input" placeholder="noreply@<?php echo esc_attr(CyberSMTP_CyberPanel_Detector::get_site_domain()); ?>">
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>From Name</th>
+                        <td>
+                            <input type="text" name="cybersmtp_smtp_settings[from_name]"
+                                   value="<?php echo esc_attr($settings['from_name'] ?? get_bloginfo('name')); ?>"
+                                   class="cybersmtp-input">
+                        </td>
+                    </tr>
+                </table>
+                <div class="cybersmtp-form-actions">
+                    <button type="button" id="cybersmtp-test-connection" class="cybersmtp-btn cybersmtp-btn-outline">
+                        Test Connection
+                    </button>
+                    <span id="cybersmtp-connection-result"></span>
+                </div>
+            </div>
+
+            <!-- Generic SMTP Settings -->
+            <div class="cybersmtp-card cybersmtp-provider-settings" data-for="smtp" <?php echo $provider !== 'smtp' ? 'style="display:none"' : ''; ?>>
+                <h3>SMTP Configuration</h3>
+                <table class="cybersmtp-form-table">
+                    <tr>
+                        <th>SMTP Host</th>
+                        <td><input type="text" name="cybersmtp_smtp_settings[host]" value="<?php echo esc_attr($settings['host'] ?? ''); ?>" class="cybersmtp-input" placeholder="smtp.example.com"></td>
+                    </tr>
+                    <tr>
+                        <th>Port</th>
+                        <td><input type="number" name="cybersmtp_smtp_settings[port]" value="<?php echo esc_attr($settings['port'] ?? '587'); ?>" class="cybersmtp-input cybersmtp-input-sm" placeholder="587"></td>
+                    </tr>
+                    <tr>
+                        <th>Username</th>
+                        <td><input type="text" name="cybersmtp_smtp_settings[username]" value="<?php echo esc_attr($settings['username'] ?? ''); ?>" class="cybersmtp-input"></td>
+                    </tr>
+                    <tr>
+                        <th>Password</th>
+                        <td><input type="password" name="cybersmtp_smtp_settings[password]" value="<?php echo esc_attr($settings['password'] ?? ''); ?>" class="cybersmtp-input"></td>
+                    </tr>
+                    <tr>
+                        <th>Encryption</th>
+                        <td>
+                            <select name="cybersmtp_smtp_settings[encryption]" class="cybersmtp-select">
+                                <option value="tls" <?php selected($settings['encryption'] ?? '', 'tls'); ?>>TLS</option>
+                                <option value="ssl" <?php selected($settings['encryption'] ?? '', 'ssl'); ?>>SSL</option>
+                                <option value="" <?php selected($settings['encryption'] ?? '', ''); ?>>None</option>
+                            </select>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>From Email</th>
+                        <td><input type="email" name="cybersmtp_smtp_settings[from_email]" value="<?php echo esc_attr($settings['from_email'] ?? ''); ?>" class="cybersmtp-input"></td>
+                    </tr>
+                    <tr>
+                        <th>From Name</th>
+                        <td><input type="text" name="cybersmtp_smtp_settings[from_name]" value="<?php echo esc_attr($settings['from_name'] ?? get_bloginfo('name')); ?>" class="cybersmtp-input"></td>
+                    </tr>
+                </table>
+            </div>
+
+            <!-- SES Settings -->
+            <div class="cybersmtp-card cybersmtp-provider-settings" data-for="ses" <?php echo $provider !== 'ses' ? 'style="display:none"' : ''; ?>>
+                <h3>Amazon SES Configuration</h3>
+                <table class="cybersmtp-form-table">
+                    <tr>
+                        <th>Mode</th>
+                        <td>
+                            <select name="cybersmtp_smtp_settings[mode]" class="cybersmtp-select cybersmtp-mode-select">
+                                <option value="api" <?php selected($mode, 'api'); ?>>API</option>
+                                <option value="smtp" <?php selected($mode, 'smtp'); ?>>SMTP</option>
+                            </select>
+                        </td>
+                    </tr>
+                    <tr class="cybersmtp-mode-api"><th>Access Key</th><td><input type="text" name="cybersmtp_smtp_settings[api_key]" value="<?php echo esc_attr($settings['api_key'] ?? ''); ?>" class="cybersmtp-input"></td></tr>
+                    <tr class="cybersmtp-mode-api"><th>Secret Key</th><td><input type="password" name="cybersmtp_smtp_settings[api_secret]" value="<?php echo esc_attr($settings['api_secret'] ?? ''); ?>" class="cybersmtp-input"></td></tr>
+                    <tr><th>Region</th><td><input type="text" name="cybersmtp_smtp_settings[region]" value="<?php echo esc_attr($settings['region'] ?? 'us-east-1'); ?>" class="cybersmtp-input cybersmtp-input-sm" placeholder="us-east-1"></td></tr>
+                    <tr class="cybersmtp-mode-smtp"><th>SMTP Host</th><td><input type="text" name="cybersmtp_smtp_settings[host]" value="<?php echo esc_attr($settings['host'] ?? ''); ?>" class="cybersmtp-input" placeholder="email-smtp.us-east-1.amazonaws.com"></td></tr>
+                    <tr class="cybersmtp-mode-smtp"><th>Port</th><td><input type="number" name="cybersmtp_smtp_settings[port]" value="<?php echo esc_attr($settings['port'] ?? '587'); ?>" class="cybersmtp-input cybersmtp-input-sm"></td></tr>
+                    <tr class="cybersmtp-mode-smtp"><th>Username</th><td><input type="text" name="cybersmtp_smtp_settings[username]" value="<?php echo esc_attr($settings['username'] ?? ''); ?>" class="cybersmtp-input"></td></tr>
+                    <tr class="cybersmtp-mode-smtp"><th>Password</th><td><input type="password" name="cybersmtp_smtp_settings[password]" value="<?php echo esc_attr($settings['password'] ?? ''); ?>" class="cybersmtp-input"></td></tr>
+                    <tr><th>From Email</th><td><input type="email" name="cybersmtp_smtp_settings[from_email]" value="<?php echo esc_attr($settings['from_email'] ?? ''); ?>" class="cybersmtp-input"></td></tr>
+                    <tr><th>From Name</th><td><input type="text" name="cybersmtp_smtp_settings[from_name]" value="<?php echo esc_attr($settings['from_name'] ?? get_bloginfo('name')); ?>" class="cybersmtp-input"></td></tr>
+                </table>
+            </div>
+
+            <!-- SendGrid Settings -->
+            <div class="cybersmtp-card cybersmtp-provider-settings" data-for="sendgrid" <?php echo $provider !== 'sendgrid' ? 'style="display:none"' : ''; ?>>
+                <h3>SendGrid Configuration</h3>
+                <table class="cybersmtp-form-table">
+                    <tr>
+                        <th>Mode</th>
+                        <td>
+                            <select name="cybersmtp_smtp_settings[mode]" class="cybersmtp-select cybersmtp-mode-select">
+                                <option value="api" <?php selected($mode, 'api'); ?>>API</option>
+                                <option value="smtp" <?php selected($mode, 'smtp'); ?>>SMTP</option>
+                            </select>
+                        </td>
+                    </tr>
+                    <tr class="cybersmtp-mode-api"><th>API Key</th><td><input type="password" name="cybersmtp_smtp_settings[api_key]" value="<?php echo esc_attr($settings['api_key'] ?? ''); ?>" class="cybersmtp-input"></td></tr>
+                    <tr class="cybersmtp-mode-smtp"><th>SMTP Host</th><td><input type="text" name="cybersmtp_smtp_settings[host]" value="<?php echo esc_attr($settings['host'] ?? 'smtp.sendgrid.net'); ?>" class="cybersmtp-input"></td></tr>
+                    <tr class="cybersmtp-mode-smtp"><th>Port</th><td><input type="number" name="cybersmtp_smtp_settings[port]" value="<?php echo esc_attr($settings['port'] ?? '587'); ?>" class="cybersmtp-input cybersmtp-input-sm"></td></tr>
+                    <tr class="cybersmtp-mode-smtp"><th>Username</th><td><input type="text" name="cybersmtp_smtp_settings[username]" value="<?php echo esc_attr($settings['username'] ?? 'apikey'); ?>" class="cybersmtp-input"></td></tr>
+                    <tr class="cybersmtp-mode-smtp"><th>Password</th><td><input type="password" name="cybersmtp_smtp_settings[password]" value="<?php echo esc_attr($settings['password'] ?? ''); ?>" class="cybersmtp-input"></td></tr>
+                    <tr><th>From Email</th><td><input type="email" name="cybersmtp_smtp_settings[from_email]" value="<?php echo esc_attr($settings['from_email'] ?? ''); ?>" class="cybersmtp-input"></td></tr>
+                    <tr><th>From Name</th><td><input type="text" name="cybersmtp_smtp_settings[from_name]" value="<?php echo esc_attr($settings['from_name'] ?? get_bloginfo('name')); ?>" class="cybersmtp-input"></td></tr>
+                </table>
+            </div>
+
+            <!-- Mailgun Settings -->
+            <div class="cybersmtp-card cybersmtp-provider-settings" data-for="mailgun" <?php echo $provider !== 'mailgun' ? 'style="display:none"' : ''; ?>>
+                <h3>Mailgun Configuration</h3>
+                <table class="cybersmtp-form-table">
+                    <tr>
+                        <th>Mode</th>
+                        <td>
+                            <select name="cybersmtp_smtp_settings[mode]" class="cybersmtp-select cybersmtp-mode-select">
+                                <option value="api" <?php selected($mode, 'api'); ?>>API</option>
+                                <option value="smtp" <?php selected($mode, 'smtp'); ?>>SMTP</option>
+                            </select>
+                        </td>
+                    </tr>
+                    <tr class="cybersmtp-mode-api"><th>API Key</th><td><input type="password" name="cybersmtp_smtp_settings[api_key]" value="<?php echo esc_attr($settings['api_key'] ?? ''); ?>" class="cybersmtp-input"></td></tr>
+                    <tr class="cybersmtp-mode-api"><th>Domain</th><td><input type="text" name="cybersmtp_smtp_settings[domain]" value="<?php echo esc_attr($settings['domain'] ?? ''); ?>" class="cybersmtp-input" placeholder="mg.example.com"></td></tr>
+                    <tr class="cybersmtp-mode-smtp"><th>SMTP Host</th><td><input type="text" name="cybersmtp_smtp_settings[host]" value="<?php echo esc_attr($settings['host'] ?? 'smtp.mailgun.org'); ?>" class="cybersmtp-input"></td></tr>
+                    <tr class="cybersmtp-mode-smtp"><th>Port</th><td><input type="number" name="cybersmtp_smtp_settings[port]" value="<?php echo esc_attr($settings['port'] ?? '587'); ?>" class="cybersmtp-input cybersmtp-input-sm"></td></tr>
+                    <tr class="cybersmtp-mode-smtp"><th>Username</th><td><input type="text" name="cybersmtp_smtp_settings[username]" value="<?php echo esc_attr($settings['username'] ?? ''); ?>" class="cybersmtp-input"></td></tr>
+                    <tr class="cybersmtp-mode-smtp"><th>Password</th><td><input type="password" name="cybersmtp_smtp_settings[password]" value="<?php echo esc_attr($settings['password'] ?? ''); ?>" class="cybersmtp-input"></td></tr>
+                    <tr><th>From Email</th><td><input type="email" name="cybersmtp_smtp_settings[from_email]" value="<?php echo esc_attr($settings['from_email'] ?? ''); ?>" class="cybersmtp-input"></td></tr>
+                    <tr><th>From Name</th><td><input type="text" name="cybersmtp_smtp_settings[from_name]" value="<?php echo esc_attr($settings['from_name'] ?? get_bloginfo('name')); ?>" class="cybersmtp-input"></td></tr>
+                </table>
+            </div>
+
+            <!-- Brevo Settings -->
+            <div class="cybersmtp-card cybersmtp-provider-settings" data-for="brevo" <?php echo $provider !== 'brevo' ? 'style="display:none"' : ''; ?>>
+                <h3>Brevo Configuration</h3>
+                <table class="cybersmtp-form-table">
+                    <tr>
+                        <th>Mode</th>
+                        <td>
+                            <select name="cybersmtp_smtp_settings[mode]" class="cybersmtp-select cybersmtp-mode-select">
+                                <option value="api" <?php selected($mode, 'api'); ?>>API</option>
+                                <option value="smtp" <?php selected($mode, 'smtp'); ?>>SMTP</option>
+                            </select>
+                        </td>
+                    </tr>
+                    <tr class="cybersmtp-mode-api"><th>API Key</th><td><input type="password" name="cybersmtp_smtp_settings[api_key]" value="<?php echo esc_attr($settings['api_key'] ?? ''); ?>" class="cybersmtp-input"></td></tr>
+                    <tr class="cybersmtp-mode-smtp"><th>SMTP Host</th><td><input type="text" name="cybersmtp_smtp_settings[host]" value="<?php echo esc_attr($settings['host'] ?? 'smtp-relay.brevo.com'); ?>" class="cybersmtp-input"></td></tr>
+                    <tr class="cybersmtp-mode-smtp"><th>Port</th><td><input type="number" name="cybersmtp_smtp_settings[port]" value="<?php echo esc_attr($settings['port'] ?? '587'); ?>" class="cybersmtp-input cybersmtp-input-sm"></td></tr>
+                    <tr class="cybersmtp-mode-smtp"><th>Username</th><td><input type="text" name="cybersmtp_smtp_settings[username]" value="<?php echo esc_attr($settings['username'] ?? ''); ?>" class="cybersmtp-input"></td></tr>
+                    <tr class="cybersmtp-mode-smtp"><th>Password</th><td><input type="password" name="cybersmtp_smtp_settings[password]" value="<?php echo esc_attr($settings['password'] ?? ''); ?>" class="cybersmtp-input"></td></tr>
+                    <tr><th>From Email</th><td><input type="email" name="cybersmtp_smtp_settings[from_email]" value="<?php echo esc_attr($settings['from_email'] ?? ''); ?>" class="cybersmtp-input"></td></tr>
+                    <tr><th>From Name</th><td><input type="text" name="cybersmtp_smtp_settings[from_name]" value="<?php echo esc_attr($settings['from_name'] ?? get_bloginfo('name')); ?>" class="cybersmtp-input"></td></tr>
+                </table>
+            </div>
+
+            <div class="cybersmtp-form-actions">
+                <button type="submit" class="cybersmtp-btn cybersmtp-btn-primary">Save Settings</button>
+            </div>
+        </form>
+        <?php
+    }
+
+    // ─── LOGS ───────────────────────────────────────────────
+
+    private function render_logs() {
         $logger = new CyberSMTP_Email_Logger();
 
-        // Filtering
-        $status_filter = isset($_GET['status']) ? sanitize_text_field($_GET['status']) : '';
-        $recipient_filter = isset($_GET['recipient']) ? sanitize_email($_GET['recipient']) : '';
-        $logs = $logger->get_logs(100, $status_filter, $recipient_filter);
+        $result = $logger->get_logs([
+            'per_page'  => 20,
+            'page'      => max(1, intval($_GET['paged'] ?? 1)),
+            'status'    => sanitize_text_field($_GET['status'] ?? ''),
+            'search'    => sanitize_text_field($_GET['s'] ?? ''),
+            'date_from' => sanitize_text_field($_GET['date_from'] ?? ''),
+            'date_to'   => sanitize_text_field($_GET['date_to'] ?? ''),
+        ]);
 
-        // Analytics
-        $analytics = $logger->get_analytics();
-        $sent_count = $analytics['sent'] ?? 0;
-        $failed_count = $analytics['failed'] ?? 0;
-        $total = $sent_count + $failed_count;
-        $success_rate = $total > 0 ? round(($sent_count / $total) * 100, 1) : 0;
-        echo '<h2>Email Logs</h2>';
-        echo '<div style="margin-bottom:16px;">';
-        echo '<strong>Sent:</strong> ' . esc_html($sent_count) . ' | ';
-        echo '<strong>Failed:</strong> ' . esc_html($failed_count) . ' | ';
-        echo '<strong>Success Rate:</strong> ' . esc_html($success_rate) . '%';
-        echo '</div>';
-        // Filter form
-        echo '<form method="get" style="margin-bottom:16px;">';
-        echo '<input type="hidden" name="page" value="cybersmtp">';
-        echo '<input type="hidden" name="tab" value="logs">';
-        echo 'Status: <select name="status"><option value="">All</option><option value="sent"' . selected($status_filter, 'sent', false) . '>Sent</option><option value="error"' . selected($status_filter, 'error', false) . '>Failed</option></select> ';
-        echo 'Recipient: <input type="email" name="recipient" value="' . esc_attr($recipient_filter) . '" placeholder="user@example.com"> ';
-        echo '<input type="submit" class="button" value="Filter">';
-        echo '</form>';
-        // Logs table
-        echo '<table class="widefat fixed striped"><thead><tr>';
-        echo '<th>Date</th><th>To</th><th>Subject</th><th>Status</th><th>Error</th>';
-        echo '</tr></thead><tbody>';
-        if ($logs) {
-            foreach ($logs as $log) {
-                echo '<tr>';
-                echo '<td>' . esc_html($log['created_at']) . '</td>';
-                echo '<td>' . esc_html($log['to_email']) . '</td>';
-                echo '<td>' . esc_html($log['subject']) . '</td>';
-                echo '<td>' . esc_html($log['status']) . '</td>';
-                echo '<td>' . esc_html($log['response_data']) . '</td>';
-                echo '</tr>';
-            }
-        } else {
-            echo '<tr><td colspan="5">No logs found.</td></tr>';
-        }
-        echo '</tbody></table>';
+        $logs = $result['logs'];
+        $total = $result['total'];
+        $total_pages = $result['total_pages'];
+        $current_page = $result['page'];
+        ?>
+        <!-- Filters -->
+        <div class="cybersmtp-card">
+            <form method="get" class="cybersmtp-log-filters">
+                <input type="hidden" name="page" value="cybersmtp">
+                <input type="hidden" name="tab" value="logs">
+                <div class="cybersmtp-filter-row">
+                    <input type="text" name="s" value="<?php echo esc_attr($_GET['s'] ?? ''); ?>"
+                           placeholder="Search recipient or subject..." class="cybersmtp-input">
+                    <select name="status" class="cybersmtp-select">
+                        <option value="">All Status</option>
+                        <option value="sent" <?php selected($_GET['status'] ?? '', 'sent'); ?>>Sent</option>
+                        <option value="error" <?php selected($_GET['status'] ?? '', 'error'); ?>>Failed</option>
+                    </select>
+                    <input type="date" name="date_from" value="<?php echo esc_attr($_GET['date_from'] ?? ''); ?>" class="cybersmtp-input cybersmtp-input-sm">
+                    <span>to</span>
+                    <input type="date" name="date_to" value="<?php echo esc_attr($_GET['date_to'] ?? ''); ?>" class="cybersmtp-input cybersmtp-input-sm">
+                    <button type="submit" class="cybersmtp-btn cybersmtp-btn-outline">Filter</button>
+                    <?php if (!empty($_GET['s']) || !empty($_GET['status']) || !empty($_GET['date_from'])): ?>
+                        <a href="?page=cybersmtp&tab=logs" class="cybersmtp-btn cybersmtp-btn-text">Clear</a>
+                    <?php endif; ?>
+                </div>
+            </form>
+        </div>
+
+        <!-- Logs Table -->
+        <div class="cybersmtp-card cybersmtp-card-table">
+            <div class="cybersmtp-table-header">
+                <span><?php echo esc_html(number_format($total)); ?> emails</span>
+            </div>
+            <table class="cybersmtp-table">
+                <thead>
+                    <tr>
+                        <th>Status</th>
+                        <th>Recipient</th>
+                        <th>Subject</th>
+                        <th>Provider</th>
+                        <th>Date</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php if (empty($logs)): ?>
+                        <tr><td colspan="6" class="cybersmtp-empty">No emails found.</td></tr>
+                    <?php else: foreach ($logs as $log): ?>
+                        <tr class="cybersmtp-log-row" data-id="<?php echo intval($log['id']); ?>">
+                            <td>
+                                <?php if ($log['status'] === 'sent'): ?>
+                                    <span class="cybersmtp-badge cybersmtp-badge-success">Sent</span>
+                                <?php else: ?>
+                                    <span class="cybersmtp-badge cybersmtp-badge-error">Failed</span>
+                                <?php endif; ?>
+                            </td>
+                            <td class="cybersmtp-cell-email"><?php echo esc_html($log['to_email']); ?></td>
+                            <td class="cybersmtp-cell-subject"><?php echo esc_html(wp_trim_words($log['subject'], 8)); ?></td>
+                            <td><span class="cybersmtp-provider-tag"><?php echo esc_html($log['provider'] ?: '—'); ?></span></td>
+                            <td class="cybersmtp-cell-date"><?php echo esc_html(
+                                human_time_diff(strtotime($log['created_at']), current_time('timestamp')) . ' ago'
+                            ); ?></td>
+                            <td>
+                                <button type="button" class="cybersmtp-btn-icon cybersmtp-toggle-detail" title="Details">
+                                    <span class="dashicons dashicons-arrow-down-alt2"></span>
+                                </button>
+                                <button type="button" class="cybersmtp-btn-icon cybersmtp-resend-btn"
+                                        data-id="<?php echo intval($log['id']); ?>" title="Resend">
+                                    <span class="dashicons dashicons-controls-repeat"></span>
+                                </button>
+                            </td>
+                        </tr>
+                        <tr class="cybersmtp-log-detail" style="display:none">
+                            <td colspan="6">
+                                <div class="cybersmtp-detail-content">
+                                    <div class="cybersmtp-detail-row">
+                                        <strong>To:</strong> <?php echo esc_html($log['to_email']); ?>
+                                    </div>
+                                    <div class="cybersmtp-detail-row">
+                                        <strong>Subject:</strong> <?php echo esc_html($log['subject']); ?>
+                                    </div>
+                                    <div class="cybersmtp-detail-row">
+                                        <strong>Date:</strong> <?php echo esc_html($log['created_at']); ?>
+                                    </div>
+                                    <?php if (!empty($log['message_id'])): ?>
+                                    <div class="cybersmtp-detail-row">
+                                        <strong>Message ID:</strong> <code><?php echo esc_html($log['message_id']); ?></code>
+                                    </div>
+                                    <?php endif; ?>
+                                    <?php if (!empty($log['error_message'])): ?>
+                                    <div class="cybersmtp-detail-row cybersmtp-detail-error">
+                                        <strong>Error:</strong> <?php echo esc_html($log['error_message']); ?>
+                                    </div>
+                                    <?php endif; ?>
+                                    <div class="cybersmtp-detail-row">
+                                        <strong>Preview:</strong>
+                                        <div class="cybersmtp-email-preview">
+                                            <?php echo wp_kses_post(wp_trim_words(strip_tags($log['body']), 100)); ?>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                    <?php endforeach; endif; ?>
+                </tbody>
+            </table>
+
+            <?php if ($total_pages > 1): ?>
+            <div class="cybersmtp-pagination">
+                <?php
+                $base_url = add_query_arg([
+                    'page' => 'cybersmtp', 'tab' => 'logs',
+                    's' => $_GET['s'] ?? '', 'status' => $_GET['status'] ?? '',
+                    'date_from' => $_GET['date_from'] ?? '', 'date_to' => $_GET['date_to'] ?? '',
+                ], admin_url('admin.php'));
+
+                if ($current_page > 1): ?>
+                    <a href="<?php echo esc_url(add_query_arg('paged', $current_page - 1, $base_url)); ?>"
+                       class="cybersmtp-btn cybersmtp-btn-sm">&laquo; Prev</a>
+                <?php endif; ?>
+                <span class="cybersmtp-page-info">Page <?php echo $current_page; ?> of <?php echo $total_pages; ?></span>
+                <?php if ($current_page < $total_pages): ?>
+                    <a href="<?php echo esc_url(add_query_arg('paged', $current_page + 1, $base_url)); ?>"
+                       class="cybersmtp-btn cybersmtp-btn-sm">Next &raquo;</a>
+                <?php endif; ?>
+            </div>
+            <?php endif; ?>
+        </div>
+        <?php
     }
-} 
+
+    // ─── DELIVERABILITY ─────────────────────────────────────
+
+    private function render_deliverability() {
+        $domain = CyberSMTP_CyberPanel_Detector::get_site_domain();
+        ?>
+        <div class="cybersmtp-card">
+            <h3>Domain Health Check</h3>
+            <p>Verify your email authentication records to improve deliverability and avoid spam folders.</p>
+
+            <div class="cybersmtp-dns-check-form">
+                <input type="text" id="cybersmtp-dns-domain" value="<?php echo esc_attr($domain); ?>"
+                       class="cybersmtp-input" placeholder="example.com">
+                <button type="button" id="cybersmtp-check-dns" class="cybersmtp-btn cybersmtp-btn-primary">
+                    Check Domain
+                </button>
+            </div>
+        </div>
+
+        <div id="cybersmtp-dns-results" style="display:none">
+            <div class="cybersmtp-dns-grid">
+                <div class="cybersmtp-dns-card" id="cybersmtp-dns-spf">
+                    <div class="cybersmtp-dns-icon"></div>
+                    <h4>SPF Record</h4>
+                    <p class="cybersmtp-dns-status"></p>
+                    <code class="cybersmtp-dns-record"></code>
+                    <div class="cybersmtp-dns-help"></div>
+                </div>
+
+                <div class="cybersmtp-dns-card" id="cybersmtp-dns-dkim">
+                    <div class="cybersmtp-dns-icon"></div>
+                    <h4>DKIM Record</h4>
+                    <p class="cybersmtp-dns-status"></p>
+                    <code class="cybersmtp-dns-record"></code>
+                    <div class="cybersmtp-dns-help"></div>
+                </div>
+
+                <div class="cybersmtp-dns-card" id="cybersmtp-dns-dmarc">
+                    <div class="cybersmtp-dns-icon"></div>
+                    <h4>DMARC Record</h4>
+                    <p class="cybersmtp-dns-status"></p>
+                    <code class="cybersmtp-dns-record"></code>
+                    <div class="cybersmtp-dns-help"></div>
+                </div>
+
+                <div class="cybersmtp-dns-card" id="cybersmtp-dns-mx">
+                    <div class="cybersmtp-dns-icon"></div>
+                    <h4>MX Records</h4>
+                    <p class="cybersmtp-dns-status"></p>
+                    <div class="cybersmtp-dns-record"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="cybersmtp-card">
+            <h3>Test Your Email Score</h3>
+            <p>Check how your emails perform across spam filters, blacklists, and authentication checks.</p>
+            <a href="https://platform.cyberpersons.com/MailTester/MailTester" target="_blank"
+               class="cybersmtp-btn cybersmtp-btn-primary">
+                Open Mail Tester
+            </a>
+        </div>
+
+        <?php
+        $settings = get_option('cybersmtp_smtp_settings', []);
+        if (($settings['provider'] ?? '') !== 'cybermail'):
+        ?>
+        <div class="cybersmtp-card cybersmtp-promo">
+            <div class="cybersmtp-promo-content">
+                <h3>Want automatic DNS setup?</h3>
+                <p>CyberMail can automatically configure SPF, DKIM, and DMARC for your domain. No manual DNS editing needed.</p>
+                <a href="<?php echo esc_url(CyberSMTP_CyberPanel_Detector::get_signup_url()); ?>"
+                   target="_blank" class="cybersmtp-btn cybersmtp-btn-primary">
+                    Try CyberMail Free
+                </a>
+            </div>
+        </div>
+        <?php endif;
+    }
+
+    // ─── TEST EMAIL ─────────────────────────────────────────
+
+    private function render_test() {
+        ?>
+        <div class="cybersmtp-card" style="max-width:560px">
+            <h3>Send a Test Email</h3>
+            <p>Verify your email configuration is working correctly.</p>
+
+            <div class="cybersmtp-test-form">
+                <input type="email" id="cybersmtp-test-email"
+                       value="<?php echo esc_attr(wp_get_current_user()->user_email); ?>"
+                       class="cybersmtp-input" placeholder="recipient@example.com">
+                <button type="button" id="cybersmtp-send-test" class="cybersmtp-btn cybersmtp-btn-primary">
+                    Send Test Email
+                </button>
+            </div>
+            <div id="cybersmtp-test-result"></div>
+        </div>
+        <?php
+    }
+
+    // ─── HELPERS ────────────────────────────────────────────
+
+    private static function provider_name($key) {
+        $names = [
+            'cybermail' => 'CyberMail',
+            'smtp'      => 'SMTP',
+            'ses'       => 'Amazon SES',
+            'sendgrid'  => 'SendGrid',
+            'mailgun'   => 'Mailgun',
+            'brevo'     => 'Brevo',
+        ];
+        return $names[$key] ?? $key;
+    }
+
+    public static function encrypt($value) {
+        if (empty($value)) return '';
+        $key = wp_salt('auth');
+        $iv = substr(hash('sha256', wp_salt('secure_auth')), 0, 16);
+        $encrypted = openssl_encrypt($value, 'AES-256-CBC', $key, 0, $iv);
+        return $encrypted !== false ? base64_encode($encrypted) : '';
+    }
+
+    public static function decrypt($value) {
+        if (empty($value)) return '';
+        $key = wp_salt('auth');
+        $iv = substr(hash('sha256', wp_salt('secure_auth')), 0, 16);
+        $decrypted = openssl_decrypt(base64_decode($value), 'AES-256-CBC', $key, 0, $iv);
+        return $decrypted !== false ? $decrypted : '';
+    }
+}

@@ -5,77 +5,61 @@ if (!defined('ABSPATH')) {
 
 require_once __DIR__ . '/class-provider-abstract.php';
 
-use PHPMailer\PHPMailer\PHPMailer;
-use GuzzleHttp\Client;
-use SendGrid; // from sendgrid-php SDK
-use SendGrid\Mail\Mail;
-
 class CyberSMTP_Provider_SendGrid extends CyberSMTP_Provider_Abstract {
-    protected $settings;
-
-    public function __construct($settings = array()) {
-        $this->settings = $settings;
-    }
 
     public function send($email_data) {
-        if (($this->settings['mode'] ?? 'smtp') === 'api' && !empty($this->settings['api_key'])) {
-            // Send via SendGrid API using official SDK
-            try {
-                $email = new Mail();
-                $from_email = $this->settings['from_email'] ?? 'from@example.com';
-                $from_name = $this->settings['from_name'] ?? 'WordPress';
-                $email->setFrom($from_email, $from_name);
-                $email->setSubject($email_data['subject']);
-                $to = is_array($email_data['to']) ? $email_data['to'] : [$email_data['to']];
-                foreach ($to as $to_addr) {
-                    $email->addTo($to_addr);
-                }
-                $email->addContent($email_data['is_html'] ? 'text/html' : 'text/plain', $email_data['message']);
-                $sendgrid = new SendGrid($this->settings['api_key']);
-                $response = $sendgrid->send($email);
-                file_put_contents(dirname(__DIR__, 2) . '/cybersmtp-debug.log', "SendGrid API response: " . print_r([
-                    'status' => $response->statusCode(),
-                    'body' => $response->body(),
-                    'headers' => $response->headers(),
-                ], true) . "\n", FILE_APPEND);
-                if ($response->statusCode() === 202) {
-                    return ['success' => true];
-                } else {
-                    return ['success' => false, 'error' => 'SendGrid API error: ' . $response->statusCode() . ' - ' . $response->body()];
-                }
-            } catch (\Exception $e) {
-                file_put_contents(dirname(__DIR__, 2) . '/cybersmtp-debug.log', "SendGrid API exception: " . $e->getMessage() . "\n", FILE_APPEND);
-                return ['success' => false, 'error' => $e->getMessage()];
-            }
+        $mode = $this->settings['mode'] ?? 'smtp';
+
+        if ($mode === 'api' && !empty($this->settings['api_key'])) {
+            return $this->send_via_api($email_data);
         }
-        // Fallback to SMTP
-        $mail = new PHPMailer(true);
-        try {
-            $mail->isSMTP();
-            $mail->Host = $this->settings['host'] ?? 'smtp.sendgrid.net';
-            $mail->SMTPAuth = true;
-            $mail->Username = $this->settings['username'] ?? 'apikey';
-            $mail->Password = $this->settings['password'] ?? '';
-            $mail->SMTPSecure = $this->settings['encryption'] ?? PHPMailer::ENCRYPTION_STARTTLS;
-            $mail->Port = $this->settings['port'] ?? 587;
-            $mail->setFrom($this->settings['from_email'] ?? 'from@example.com', $this->settings['from_name'] ?? 'WordPress');
-            $mail->addAddress($email_data['to']);
-            $mail->Subject = $email_data['subject'];
-            $mail->Body = $email_data['message'];
-            $mail->isHTML($email_data['is_html'] ?? false);
-            if (!empty($email_data['headers'])) {
-                foreach ($email_data['headers'] as $header) {
-                    $mail->addCustomHeader($header);
-                }
-            }
-            $mail->send();
-            return array('success' => true);
-        } catch (\Exception $e) {
-            return array('success' => false, 'error' => $mail->ErrorInfo);
-        }
+
+        return $this->send_smtp(
+            $email_data,
+            $this->settings['host'] ?? 'smtp.sendgrid.net',
+            $this->settings['port'] ?? 587,
+            $this->settings['encryption'] ?? 'tls'
+        );
     }
 
-    public function get_settings_fields() {
-        return array();
+    protected function send_via_api($email_data) {
+        $to = is_array($email_data['to']) ? $email_data['to'] : [$email_data['to']];
+        $to_list = array_map(function($addr) {
+            return ['email' => trim($addr)];
+        }, $to);
+
+        $payload = [
+            'personalizations' => [['to' => $to_list]],
+            'from' => [
+                'email' => $this->settings['from_email'] ?? '',
+                'name'  => $this->settings['from_name'] ?? get_bloginfo('name'),
+            ],
+            'subject' => $email_data['subject'] ?? '',
+            'content' => [[
+                'type'  => !empty($email_data['is_html']) ? 'text/html' : 'text/plain',
+                'value' => $email_data['message'] ?? '',
+            ]],
+        ];
+
+        $response = wp_remote_post('https://api.sendgrid.com/v3/mail/send', [
+            'headers' => [
+                'Authorization' => 'Bearer ' . $this->settings['api_key'],
+                'Content-Type'  => 'application/json',
+            ],
+            'body'    => wp_json_encode($payload),
+            'timeout' => 30,
+        ]);
+
+        if (is_wp_error($response)) {
+            return ['success' => false, 'error' => $response->get_error_message()];
+        }
+
+        $code = wp_remote_retrieve_response_code($response);
+        if ($code === 202) {
+            return ['success' => true, 'provider' => 'sendgrid'];
+        }
+
+        $body = wp_remote_retrieve_body($response);
+        return ['success' => false, 'error' => 'SendGrid API error (HTTP ' . $code . '): ' . $body];
     }
-} 
+}

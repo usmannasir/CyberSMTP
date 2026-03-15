@@ -4,8 +4,27 @@ if (!defined('ABSPATH')) {
 }
 
 class CyberSMTP_Settings {
-    public function __construct() {
-        // Initialize settings, register options, etc.
+
+    public static function get($key = null, $default = '') {
+        $settings = get_option('cybersmtp_smtp_settings', []);
+
+        if ($key === null) {
+            return $settings;
+        }
+
+        return $settings[$key] ?? $default;
     }
-    // Add methods for getting, setting, and validating options
-} 
+
+    public static function get_provider() {
+        return self::get('provider', '');
+    }
+
+    public static function is_configured() {
+        $provider = self::get_provider();
+        return $provider && (!empty(self::get('api_key')) || !empty(self::get('host')));
+    }
+
+    public static function is_cybermail() {
+        return self::get_provider() === 'cybermail';
+    }
+}
