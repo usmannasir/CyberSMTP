@@ -3,7 +3,7 @@
 Plugin Name: CyberSMTP
 Plugin URI: https://cyberpanel.net/cybersmtp
 Description: The official CyberPanel email plugin. Send WordPress emails reliably via CyberMail, Amazon SES, SendGrid, Mailgun, Brevo, or any SMTP server. Built-in deliverability tools, email logs, and analytics.
-Version: 2.0.0
+Version: 2.0.1
 Author: CyberPanel
 Author URI: https://cyberpanel.net
 Text Domain: cybersmtp
@@ -14,7 +14,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('CYBERSMTP_VERSION', '2.0.0');
+define('CYBERSMTP_VERSION', '2.0.1');
 define('CYBERSMTP_PATH', plugin_dir_path(__FILE__));
 define('CYBERSMTP_URL', plugin_dir_url(__FILE__));
 
@@ -57,31 +57,156 @@ add_action('plugins_loaded', function () {
 // Override wp_mail
 if (!function_exists('wp_mail')) {
     function wp_mail($to, $subject, $message, $headers = '', $attachments = []) {
-        $mailer = new CyberSMTP_Mailer();
-
-        $is_html = false;
-        $headers_arr = [];
-
-        if (!empty($headers)) {
-            $headers_arr = is_array($headers) ? $headers : explode("\n", str_replace("\r\n", "\n", $headers));
-            foreach ($headers_arr as $header) {
-                if (stripos($header, 'Content-Type:') !== false && stripos($header, 'text/html') !== false) {
-                    $is_html = true;
-                }
-            }
+        $atts = apply_filters('wp_mail', compact('to', 'subject', 'message', 'headers', 'attachments'));
+        $to = $atts['to'];
+        $subject = $atts['subject'];
+        $message = $atts['message'];
+        $headers = $atts['headers'];
+        $attachments = $atts['attachments'];
+        $short_circuit = apply_filters('pre_wp_mail', null, $atts);
+        if (null !== $short_circuit) {
+            return $short_circuit;
         }
 
+        $parsed = cybersmtp_parse_headers($headers);
+
+        $settings = get_option('cybersmtp_smtp_settings', []);
+        $from_email = apply_filters('wp_mail_from', $parsed['from_email'] ?: ($settings['from_email'] ?? ''));
+        $from_name = apply_filters('wp_mail_from_name', $parsed['from_name'] !== '' ? $parsed['from_name'] : ($settings['from_name'] ?? get_bloginfo('name')));
+        $content_type = apply_filters('wp_mail_content_type', $parsed['content_type']);
+        $charset    = apply_filters('wp_mail_charset', $parsed['charset']);
+
+        if (!is_array($to)) {
+            $to = cybersmtp_split_addresses($to);
+        }
+        if (!is_array($attachments)) {
+            $attachments = explode("\n", str_replace("\r\n", "\n", $attachments));
+        }
+
+        $mailer = new CyberSMTP_Mailer();
         $result = $mailer->send_via_provider([
-            'to'          => $to,
+            'to'          => array_values(array_filter(array_map('trim', $to))),
             'subject'     => $subject,
             'message'     => $message,
-            'headers'     => $headers_arr,
-            'is_html'     => $is_html,
-            'attachments' => $attachments,
+            'headers'     => $parsed['custom'],
+            'original_headers' => is_array($headers) ? $headers : preg_split('/\r\n|\r|\n/', $headers),
+            'from_email'  => $from_email,
+            'from_name'   => $from_name,
+            'reply_to'    => $parsed['reply_to'],
+            'cc'          => $parsed['cc'],
+            'bcc'         => $parsed['bcc'],
+            'content_type' => $content_type,
+            'is_html'     => stripos($content_type, 'text/html') !== false,
+            'charset'     => $charset,
+            'attachments' => array_filter((array) $attachments),
         ]);
 
-        return $result['success'];
+        if (empty($result['success'])) {
+            do_action('wp_mail_failed', new WP_Error('wp_mail_failed', $result['error'] ?? '', $atts));
+        } else {
+            do_action('wp_mail_succeeded', $atts);
+        }
+
+        return !empty($result['success']);
     }
+}
+
+/** Split address lists without splitting quoted names or angle addresses. */
+function cybersmtp_split_addresses($value) {
+    $result = [];
+    $current = '';
+    $quoted = false;
+    $escaped = false;
+    $angle = 0;
+    foreach (str_split((string) $value) as $char) {
+        if ($escaped) {
+            $escaped = false;
+        } elseif ($char === "\\" && $quoted) {
+            $escaped = true;
+        } elseif ($char === '"') {
+            $quoted = !$quoted;
+        } elseif (!$quoted && $char === '<') {
+            $angle++;
+        } elseif (!$quoted && $char === '>') {
+            $angle = max(0, $angle - 1);
+        } elseif (!$quoted && !$angle && $char === ',') {
+            if (trim($current) !== '') { $result[] = trim($current); }
+            $current = '';
+            continue;
+        }
+        $current .= $char;
+    }
+    if (trim($current) !== '') { $result[] = trim($current); }
+    return $result;
+}
+
+/** Preserve display names; PHPMailer validates the resulting mailbox. */
+function cybersmtp_address_parts($address) {
+    if (preg_match('/^(.*?)\s*<([^<>]+)>\s*$/', trim($address), $matches)) {
+        return [trim($matches[2]), trim(trim($matches[1]), '"')];
+    }
+    return [trim($address), ''];
+}
+
+/**
+ * Split wp_mail() headers (string or array) the way core does.
+ * From/Reply-To/Cc/Bcc/Content-Type become structured fields; everything
+ * else is returned as "Name: value" custom headers. Blank or malformed
+ * lines are dropped.
+ */
+function cybersmtp_parse_headers($headers) {
+    $out = [
+        'from_email' => '', 'from_name' => '', 'reply_to' => [], 'cc' => [], 'bcc' => [],
+        'content_type' => 'text/plain', 'charset' => get_bloginfo('charset') ?: 'UTF-8', 'custom' => [],
+    ];
+    if (empty($headers)) {
+        return $out;
+    }
+    $lines = [];
+    foreach (is_array($headers) ? $headers : preg_split('/\r\n|\r|\n/', $headers) as $name => $value) {
+        $lines[] = is_string($name) && is_string($value) ? $name . ': ' . $value : $value;
+    }
+
+    foreach ($lines as $line) {
+        if (!is_string($line) || strpos($line, ':') === false) {
+            continue;
+        }
+        list($name, $value) = explode(':', $line, 2);
+        $name  = trim($name);
+        $value = trim($value);
+        if ($name === '' || $value === '') {
+            continue;
+        }
+        switch (strtolower($name)) {
+            case 'from':
+                $out['from_name'] = '';
+                if (preg_match('/^(.*?)\s*<(.+)>\s*$/', $value, $m)) {
+                    $out['from_name']  = trim(trim($m[1]), '"');
+                    $out['from_email'] = trim($m[2]);
+                } else {
+                    $out['from_email'] = $value;
+                }
+                break;
+            case 'reply-to':
+            case 'cc':
+            case 'bcc':
+                $key = strtolower($name) === 'reply-to' ? 'reply_to' : strtolower($name);
+                $out[$key] = array_merge($out[$key], array_filter(array_map('trim', cybersmtp_split_addresses($value))));
+                break;
+            case 'content-type':
+                $parts = explode(';', $value);
+                $out['content_type'] = trim($parts[0]);
+                foreach (array_slice($parts, 1) as $param) {
+                    if (stripos($param, 'charset=') !== false) {
+                        $out['charset'] = trim(str_ireplace('charset=', '', $param), " \t\"'");
+                    }
+                }
+                break;
+            default:
+                $out['custom'][] = $name . ': ' . $value;
+        }
+    }
+    return $out;
 }
 
 // Admin notice: unconfigured

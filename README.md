@@ -20,6 +20,8 @@ The official CyberPanel email plugin for WordPress. Send emails reliably via **C
 
 ## Installation
 
+Download the installable `cybersmtp.zip` from [GitHub Releases](https://github.com/usmannasir/CyberSMTP/releases/latest), then use **Plugins → Add New → Upload Plugin**. This GitHub release does not publish an update to the WordPress.org plugin directory.
+
 1. Upload to `/wp-content/plugins/cybersmtp/` or install via WordPress plugins screen.
 2. Activate the plugin.
 3. Go to **CyberSMTP** in your admin menu.

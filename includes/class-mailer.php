@@ -37,7 +37,7 @@ class CyberSMTP_Mailer {
             'to_email'      => $to,
             'subject'       => $email_data['subject'] ?? '',
             'body'          => $email_data['message'] ?? '',
-            'headers'       => $email_data['headers'] ?? '',
+            'headers'       => $email_data['original_headers'] ?? ($email_data['headers'] ?? ''),
             'provider'      => $result['provider'] ?? (get_option('cybersmtp_smtp_settings', [])['provider'] ?? 'smtp'),
             'status'        => $result['success'] ? 'sent' : 'error',
             'message_id'    => $result['message_id'] ?? '',

@@ -50,30 +50,18 @@ class CyberSMTP_Provider_CyberMail extends CyberSMTP_Provider_Abstract {
             $payload['text'] = $email_data['message'];
         }
 
-        if (!empty($email_data['headers'])) {
-            $cc = [];
-            $bcc = [];
-            $reply_to = '';
-            foreach ($email_data['headers'] as $header) {
-                if (is_string($header)) {
-                    if (stripos($header, 'Cc:') === 0) {
-                        $cc[] = trim(substr($header, 3));
-                    } elseif (stripos($header, 'Bcc:') === 0) {
-                        $bcc[] = trim(substr($header, 4));
-                    } elseif (stripos($header, 'Reply-To:') === 0) {
-                        $reply_to = trim(substr($header, 9));
-                    }
-                }
-            }
-            if (!empty($cc)) {
-                $payload['cc'] = implode(',', $cc);
-            }
-            if (!empty($bcc)) {
-                $payload['bcc'] = implode(',', $bcc);
-            }
-            if (!empty($reply_to)) {
-                $payload['reply_to'] = $reply_to;
-            }
+        if (!empty($email_data['from_email'])) {
+            $payload['from'] = $email_data['from_email'];
+            $payload['from_name'] = $email_data['from_name'] ?? '';
+        }
+        if (!empty($email_data['cc'])) {
+            $payload['cc'] = implode(',', $email_data['cc']);
+        }
+        if (!empty($email_data['bcc'])) {
+            $payload['bcc'] = implode(',', $email_data['bcc']);
+        }
+        if (!empty($email_data['reply_to'])) {
+            $payload['reply_to'] = implode(',', $email_data['reply_to']);
         }
 
         if (!empty($email_data['attachments'])) {
@@ -111,54 +99,11 @@ class CyberSMTP_Provider_CyberMail extends CyberSMTP_Provider_Abstract {
     }
 
     protected function send_via_smtp($email_data) {
-        if (!class_exists('PHPMailer\PHPMailer\PHPMailer')) {
-            require_once ABSPATH . WPINC . '/PHPMailer/PHPMailer.php';
-            require_once ABSPATH . WPINC . '/PHPMailer/SMTP.php';
-            require_once ABSPATH . WPINC . '/PHPMailer/Exception.php';
+        $result = $this->send_smtp($email_data, $this->settings['host'] ?? 'mail.cyberpersons.com', 587, 'tls');
+        if (!empty($result['success'])) {
+            $result['provider'] = 'cybermail-smtp';
         }
-
-        $mail = new PHPMailer\PHPMailer\PHPMailer(true);
-        try {
-            $mail->isSMTP();
-            $mail->Host       = $this->settings['host'] ?? 'mail.cyberpersons.com';
-            $mail->SMTPAuth   = true;
-            $mail->Username   = $this->settings['username'] ?? '';
-            $mail->Password   = $this->settings['password'] ?? '';
-            $mail->SMTPSecure = PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
-            $mail->Port       = 587;
-            $mail->setFrom(
-                $this->settings['from_email'] ?? '',
-                $this->settings['from_name'] ?? get_bloginfo('name')
-            );
-
-            $to = is_array($email_data['to']) ? $email_data['to'] : [$email_data['to']];
-            foreach ($to as $addr) {
-                $mail->addAddress($addr);
-            }
-
-            $mail->Subject = $email_data['subject'];
-            $mail->Body    = $email_data['message'];
-            $mail->isHTML(!empty($email_data['is_html']));
-
-            if (!empty($email_data['headers'])) {
-                foreach ($email_data['headers'] as $header) {
-                    if (is_string($header) && stripos($header, 'Content-Type:') === false) {
-                        $mail->addCustomHeader($header);
-                    }
-                }
-            }
-
-            if (!empty($email_data['attachments'])) {
-                foreach ($email_data['attachments'] as $attachment) {
-                    $mail->addAttachment($attachment);
-                }
-            }
-
-            $mail->send();
-            return ['success' => true, 'provider' => 'cybermail-smtp'];
-        } catch (\Exception $e) {
-            return ['success' => false, 'error' => $mail->ErrorInfo];
-        }
+        return $result;
     }
 
     /**
